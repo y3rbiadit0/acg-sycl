@@ -1,0 +1,36 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "configure acg debug",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "build acg debug",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++ && cmake --build build"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": "build"
+    }
+  ]
+}

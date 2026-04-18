@@ -1,0 +1,75 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug acg (gdb)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/acg",
+      "args": [
+        "--matrix",
+        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "--device",
+        "gpu"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "cuda:*"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "setupCommands": [
+        {
+          "description": "Enable gdb pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "build acg debug"
+    },
+    {
+      "name": "Debug acg (cuda-gdb)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/acg",
+      "args": [
+        "--matrix",
+        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "--device",
+        "gpu"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/local/cuda-12.2/bin/cuda-gdb",
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "cuda:*"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "setupCommands": [
+        {
+          "description": "Enable gdb pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "build acg debug"
+    }
+  ]
+}
