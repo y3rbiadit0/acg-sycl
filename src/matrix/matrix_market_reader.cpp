@@ -8,7 +8,6 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -51,11 +50,12 @@ std::string parse_token(const char *&cursor) {
 MatrixMarketHeader parse_header_line(const std::string &line) {
   const char *cursor = line.c_str();
   const std::string banner = parse_token(cursor);
-  MatrixMarketHeader header;
-  header.object = parse_token(cursor);
-  header.format = parse_token(cursor);
-  header.field = parse_token(cursor);
-  header.symmetry = parse_token(cursor);
+  MatrixMarketHeader header{
+      .object = parse_token(cursor),
+      .format = parse_token(cursor),
+      .field = parse_token(cursor),
+      .symmetry = parse_token(cursor),
+  };
   skip_spaces(cursor);
 
   if (banner != "%%MatrixMarket") {
