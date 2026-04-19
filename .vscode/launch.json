@@ -70,6 +70,98 @@
         }
       ],
       "preLaunchTask": "build acg debug"
+    },
+    {
+      "name": "Debug acg SYCL kernel (gdb-oneapi)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-intel-debug/acg",
+      "args": [
+        "--matrix",
+        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "--device",
+        "gpu"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/opt/intel/oneapi/debugger/latest/bin/gdb-oneapi",
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "level_zero:gpu"
+        },
+        {
+          "name": "ZE_ENABLE_PROGRAM_DEBUGGING",
+          "value": "1"
+        },
+        {
+          "name": "SYCL_CACHE_PERSISTENT",
+          "value": "1"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "setupCommands": [
+        {
+          "description": "Enable gdb pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Enable SYCL debugger logging",
+          "text": "set debug sycl on",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "build acg kernel debug"
+    },
+    {
+      "name": "Debug acg SYCL (gdb-oneapi, OpenCL CPU)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-intel-debug/acg",
+      "args": [
+        "--matrix",
+        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "--device",
+        "cpu"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/opt/intel/oneapi/debugger/latest/bin/gdb-oneapi",
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "opencl:cpu"
+        },
+        {
+          "name": "SYCL_CACHE_PERSISTENT",
+          "value": "1"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "setupCommands": [
+        {
+          "description": "Enable gdb pretty printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Enable SYCL debugger logging",
+          "text": "set debug sycl on",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "build acg kernel debug"
     }
   ]
 }

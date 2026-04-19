@@ -31,6 +31,36 @@
         "$gcc"
       ],
       "group": "build"
+    },
+    {
+      "label": "configure acg kernel debug",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake --fresh -S . -B build-intel-debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DACG_ENABLE_DEVICE_DEBUG=ON -DACG_SYCL_TARGET=spir64"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "build acg kernel debug",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake --fresh -S . -B build-intel-debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DACG_ENABLE_DEVICE_DEBUG=ON -DACG_SYCL_TARGET=spir64 && cmake --build build-intel-debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
     }
   ]
 }

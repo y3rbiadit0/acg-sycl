@@ -13,7 +13,6 @@ namespace acg::solver
       const SolverOptions &options)
   {
     (void)matrix;
-    (void)ctx;
     (void)options;
 
     const auto start = std::chrono::steady_clock::now();
@@ -27,8 +26,7 @@ namespace acg::solver
       data[i] = i;
     }
 
-    // Create a SYCL queue
-    sycl::queue q(sycl::gpu_selector_v);
+    sycl::queue q = ctx.queue;
     std::cout << "Running on: "
               << q.get_device().get_info<sycl::info::device::name>()
               << std::endl;
@@ -44,7 +42,7 @@ namespace acg::solver
         sycl::accessor acc(buffer, h);
         sycl::accessor error_acc(error_buffer, h);
         
-        h.parallel_for(sycl::range<1>(array_size), [=](sycl::id<1> idx) {
+        h.parallel_for(sycl::range<1>(array_size-1), [=](sycl::id<1> idx) {
             if (idx[0] + 1 >= array_size) {
                 error_acc[0] = 1;
                 return;

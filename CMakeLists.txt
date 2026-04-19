@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ACG_ENABLE_SYCL "Build with SYCL support" ON)
+option(ACG_ENABLE_DEVICE_DEBUG "Build SYCL kernels with debug-friendly flags" OFF)
 set(ACG_SYCL_TARGET "nvptx64-nvidia-cuda" CACHE STRING "SYCL device target")
 
 add_library(acg_core STATIC
@@ -23,6 +24,11 @@ target_include_directories(acg_core PUBLIC include)
 if(ACG_ENABLE_SYCL)
   target_compile_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
   target_link_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
+
+  if(ACG_ENABLE_DEVICE_DEBUG)
+    target_compile_options(acg_core PUBLIC -O0 -fno-inline)
+    target_link_options(acg_core PUBLIC -O0)
+  endif()
 endif()
 
 add_executable(acg apps/acg_cli/main.cpp)
