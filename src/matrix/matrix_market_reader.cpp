@@ -28,23 +28,19 @@ struct MatrixMarketHeader {
   std::string symmetry;
 };
 
-void skip_spaces(const char *&cursor) {
-  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r') {
-    ++cursor;
-  }
+void skip_spaces(const char *&cursor);
+std::int64_t parse_int64(const char *&cursor);
+double parse_double(const char *&cursor);
+void expect_line_end(const char *cursor, const char *context);
+std::string parse_token(const char *&cursor);
+
+bool is_comment_or_empty(const std::string &line) {
+  return line.empty() || line[0] == '%';
 }
 
-std::string parse_token(const char *&cursor) {
-  skip_spaces(cursor);
-  const char *start = cursor;
-  while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t' &&
-         *cursor != '\r' && *cursor != '\n') {
-    ++cursor;
-  }
-  if (start == cursor) {
-    throw std::runtime_error("invalid Matrix Market header line");
-  }
-  return std::string(start, static_cast<std::size_t>(cursor - start));
+void append_entry(std::vector<CoordinateEntry> &entries, std::int64_t row,
+                  std::int64_t col, double value) {
+  entries.push_back(CoordinateEntry{row, col, value});
 }
 
 MatrixMarketHeader parse_header_line(const std::string &line) {
@@ -80,24 +76,24 @@ MatrixMarketHeader parse_header_line(const std::string &line) {
   return header;
 }
 
-bool is_comment_or_empty(const std::string &line) {
-  return line.empty() || line[0] == '%';
-}
-
-void append_entry(std::vector<CoordinateEntry> &entries, std::int64_t row, std::int64_t col, double value) {
-  entries.push_back(CoordinateEntry{row, col, value});
-}
-
-std::int64_t parse_int64(const char *&cursor) {
+std::string parse_token(const char *&cursor) {
   skip_spaces(cursor);
-  errno = 0;
-  char *end = nullptr;
-  const long long value = std::strtoll(cursor, &end, 10);
-  if (end == cursor || errno == ERANGE) {
-    throw std::runtime_error("invalid integer in Matrix Market file");
+  const char *start = cursor;
+  while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t' &&
+         *cursor != '\r' && *cursor != '\n') {
+    ++cursor;
   }
-  cursor = end;
-  return static_cast<std::int64_t>(value);
+  if (start == cursor) {
+    throw std::runtime_error("invalid Matrix Market header line");
+  }
+  return std::string(start, static_cast<std::size_t>(cursor - start));
+}
+
+void expect_line_end(const char *cursor, const char *context) {
+  skip_spaces(cursor);
+  if (*cursor != '\0') {
+    throw std::runtime_error(context);
+  }
 }
 
 double parse_double(const char *&cursor) {
@@ -112,10 +108,21 @@ double parse_double(const char *&cursor) {
   return value;
 }
 
-void expect_line_end(const char *cursor, const char *context) {
+std::int64_t parse_int64(const char *&cursor) {
   skip_spaces(cursor);
-  if (*cursor != '\0') {
-    throw std::runtime_error(context);
+  errno = 0;
+  char *end = nullptr;
+  const long long value = std::strtoll(cursor, &end, 10);
+  if (end == cursor || errno == ERANGE) {
+    throw std::runtime_error("invalid integer in Matrix Market file");
+  }
+  cursor = end;
+  return static_cast<std::int64_t>(value);
+}
+
+void skip_spaces(const char *&cursor) {
+  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r') {
+    ++cursor;
   }
 }
 
