@@ -1,3 +1,4 @@
+#include <chrono>
 #include <exception>
 #include <iostream>
 #include <utility>
@@ -17,7 +18,12 @@ int main(int argc, char **argv) {
     }
 
     sycl::queue queue = acg::runtime::make_queue(config.device, config.enable_profiling);
+
+    const auto matrix_load_start = std::chrono::steady_clock::now();
     const auto matrix = acg::matrix::read_matrix_market(config.matrix_path);
+    const auto matrix_load_end = std::chrono::steady_clock::now();
+    const double matrix_load_time_seconds =
+        std::chrono::duration<double>(matrix_load_end - matrix_load_start).count();
 
     acg::runtime::RunContext ctx{
         .queue = std::move(queue),
@@ -29,7 +35,10 @@ int main(int argc, char **argv) {
     const auto &device = ctx.queue.get_device();
     std::cout << "device-kind: " << acg::runtime::to_string(config.device) << '\n';
     std::cout << "device-name: " << device.get_info<sycl::info::device::name>() << '\n';
-    std::cout << "matrix: rows=" << matrix.rows << " cols=" << matrix.cols << " nnz=" << matrix.nnz() << '\n';
+    std::cout << "matrix: rows=" << matrix.rows
+              << " cols=" << matrix.cols
+              << " nnz=" << matrix.nnz()
+              << " load_time=" << matrix_load_time_seconds << "s\n";
 
     const acg::solver::SolverResult result = acg::solver::run_cg(matrix, ctx, config.solver);
     std::cout << "solver: converged=" << (result.converged ? "true" : "false")

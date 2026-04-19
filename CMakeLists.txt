@@ -22,8 +22,8 @@ add_library(acg_core STATIC
 target_include_directories(acg_core PUBLIC include)
 
 if(ACG_ENABLE_SYCL)
-  target_compile_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
-  target_link_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
+  target_compile_options(acg_core PUBLIC -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
+  target_link_options(acg_core PUBLIC -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
 
   if(ACG_ENABLE_DEVICE_DEBUG)
     target_compile_options(acg_core PUBLIC -O0 -fno-inline)

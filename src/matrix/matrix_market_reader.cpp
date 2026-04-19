@@ -1,12 +1,14 @@
 #include "acg/matrix/matrix_market_reader.hpp"
 
 #include <algorithm>
+#include <cerrno>
+#include <cstdlib>
 #include <cstdint>
 #include <fstream>
 #include <limits>
-#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -27,11 +29,34 @@ struct MatrixMarketHeader {
   std::string symmetry;
 };
 
+void skip_spaces(const char *&cursor) {
+  while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r') {
+    ++cursor;
+  }
+}
+
+std::string parse_token(const char *&cursor) {
+  skip_spaces(cursor);
+  const char *start = cursor;
+  while (*cursor != '\0' && *cursor != ' ' && *cursor != '\t' &&
+         *cursor != '\r' && *cursor != '\n') {
+    ++cursor;
+  }
+  if (start == cursor) {
+    throw std::runtime_error("invalid Matrix Market header line");
+  }
+  return std::string(start, static_cast<std::size_t>(cursor - start));
+}
+
 MatrixMarketHeader parse_header_line(const std::string &line) {
-  std::istringstream stream(line);
-  std::string banner;
+  const char *cursor = line.c_str();
+  const std::string banner = parse_token(cursor);
   MatrixMarketHeader header;
-  stream >> banner >> header.object >> header.format >> header.field >> header.symmetry;
+  header.object = parse_token(cursor);
+  header.format = parse_token(cursor);
+  header.field = parse_token(cursor);
+  header.symmetry = parse_token(cursor);
+  skip_spaces(cursor);
 
   if (banner != "%%MatrixMarket") {
     throw std::runtime_error("invalid Matrix Market banner");
@@ -48,6 +73,9 @@ MatrixMarketHeader parse_header_line(const std::string &line) {
   if (header.symmetry != "general" && header.symmetry != "symmetric") {
     throw std::runtime_error("only Matrix Market symmetries 'general' and 'symmetric' are supported");
   }
+  if (*cursor != '\0') {
+    throw std::runtime_error("invalid Matrix Market header line");
+  }
 
   return header;
 }
@@ -58,6 +86,37 @@ bool is_comment_or_empty(const std::string &line) {
 
 void append_entry(std::vector<CoordinateEntry> &entries, std::int64_t row, std::int64_t col, double value) {
   entries.push_back(CoordinateEntry{row, col, value});
+}
+
+std::int64_t parse_int64(const char *&cursor) {
+  skip_spaces(cursor);
+  errno = 0;
+  char *end = nullptr;
+  const long long value = std::strtoll(cursor, &end, 10);
+  if (end == cursor || errno == ERANGE) {
+    throw std::runtime_error("invalid integer in Matrix Market file");
+  }
+  cursor = end;
+  return static_cast<std::int64_t>(value);
+}
+
+double parse_double(const char *&cursor) {
+  skip_spaces(cursor);
+  errno = 0;
+  char *end = nullptr;
+  const double value = std::strtod(cursor, &end);
+  if (end == cursor || errno == ERANGE) {
+    throw std::runtime_error("invalid floating-point value in Matrix Market file");
+  }
+  cursor = end;
+  return value;
+}
+
+void expect_line_end(const char *cursor, const char *context) {
+  skip_spaces(cursor);
+  if (*cursor != '\0') {
+    throw std::runtime_error(context);
+  }
 }
 
 } // namespace
@@ -85,9 +144,12 @@ CsrMatrix<double> read_matrix_market(const std::string &path) {
       continue;
     }
 
-    std::istringstream size_stream(line);
-    size_stream >> rows >> cols >> file_nnz;
-    if (!size_stream || rows < 0 || cols < 0 || file_nnz < 0) {
+    const char *cursor = line.c_str();
+    rows = parse_int64(cursor);
+    cols = parse_int64(cursor);
+    file_nnz = parse_int64(cursor);
+    expect_line_end(cursor, "invalid Matrix Market size line");
+    if (rows < 0 || cols < 0 || file_nnz < 0) {
       throw std::runtime_error("invalid Matrix Market size line");
     }
     read_size_line = true;
@@ -111,14 +173,11 @@ CsrMatrix<double> read_matrix_market(const std::string &path) {
       continue;
     }
 
-    std::istringstream entry_stream(line);
-    std::int64_t row = 0;
-    std::int64_t col = 0;
-    double value = 0.0;
-    entry_stream >> row >> col >> value;
-    if (!entry_stream) {
-      throw std::runtime_error("invalid Matrix Market entry line");
-    }
+    const char *cursor = line.c_str();
+    std::int64_t row = parse_int64(cursor);
+    std::int64_t col = parse_int64(cursor);
+    const double value = parse_double(cursor);
+    expect_line_end(cursor, "invalid Matrix Market entry line");
     if (row <= 0 || col <= 0 || row > rows || col > cols) {
       throw std::runtime_error("Matrix Market indices are out of range");
     }
