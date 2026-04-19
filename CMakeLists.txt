@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(aCG_SYCL LANGUAGES CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,8 +21,8 @@ add_library(acg_core STATIC
 target_include_directories(acg_core PUBLIC include)
 
 if(ACG_ENABLE_SYCL)
-  target_compile_options(acg_core PUBLIC -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
-  target_link_options(acg_core PUBLIC -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
+  target_compile_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
+  target_link_options(acg_core PUBLIC -g -fsycl -fsycl-targets=${ACG_SYCL_TARGET})
 endif()
 
 add_executable(acg apps/acg_cli/main.cpp)

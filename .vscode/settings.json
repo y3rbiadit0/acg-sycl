@@ -1,0 +1,21 @@
+{
+  "cmake.configureOnOpen": false,
+  "cmake.buildDirectory": "${workspaceFolder}/build",
+  "cmake.configureSettings": {
+    "CMAKE_CXX_COMPILER": "/opt/dpcpp/llvm/build/bin/clang++",
+    "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+  },
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+  "C_Cpp.default.compilerPath": "/opt/dpcpp/llvm/build/bin/clang++",
+  "C_Cpp.default.intelliSenseMode": "linux-clang-x64",
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.compilerArgs": [
+    "-fsycl"
+  ],
+  "C_Cpp.default.browse.path": [
+    "${workspaceFolder}",
+    "/opt/intel/oneapi",
+    "/opt/dpcpp/llvm/build/lib/clang/21/include"
+  ]
+}
