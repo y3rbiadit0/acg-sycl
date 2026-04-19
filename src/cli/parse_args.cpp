@@ -67,6 +67,16 @@ AppConfig parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (arg == "--manufactured-solution") {
+      config.solver.manufactured_solution = true;
+      continue;
+    }
+
+    if (arg == "--seed") {
+      config.solver.seed = static_cast<std::uint32_t>(std::stoul(require_value(argc, argv, i, "--seed")));
+      continue;
+    }
+
     throw std::runtime_error("unknown argument: " + arg);
   }
 
@@ -86,6 +96,8 @@ void print_usage(std::ostream &out, const char *program_name) {
       << "  --profile                   Enable SYCL queue profiling\n"
       << "  --tol <value>               Solver tolerance\n"
       << "  --max-iters <n>             Maximum solver iterations\n"
+      << "  --manufactured-solution     Build rhs from a known solution\n"
+      << "  --seed <n>                  Seed for manufactured solution\n"
       << "  --help, -h                  Show this message\n";
 }
 
