@@ -8,7 +8,7 @@
       "program": "${workspaceFolder}/build/acg",
       "args": [
         "--matrix",
-        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "gpu"
       ],
@@ -43,7 +43,7 @@
       "program": "${workspaceFolder}/build/acg",
       "args": [
         "--matrix",
-        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "gpu"
       ],
@@ -72,13 +72,40 @@
       "preLaunchTask": "build acg debug"
     },
     {
+      "name": "Run acg (release)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-release/acg",
+      "args": [
+        "--matrix",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
+        "--device",
+        "gpu"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "noDebug": true,
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "cuda:*"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "preLaunchTask": "build acg release"
+    },
+    {
       "name": "Debug acg SYCL kernel (gdb-oneapi)",
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build-intel-debug/acg",
       "args": [
         "--matrix",
-        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "gpu"
       ],
@@ -126,7 +153,7 @@
       "program": "${workspaceFolder}/build-intel-debug/acg",
       "args": [
         "--matrix",
-        "${workspaceFolder}/data/matrices/small_spd_3x3.mtx",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "cpu"
       ],
@@ -162,6 +189,18 @@
         }
       ],
       "preLaunchTask": "build acg kernel debug"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "matrixFile",
+      "type": "pickString",
+      "description": "Select Matrix Market file",
+      "default": "Bump_2911/Bump_2911.mtx",
+      "options": [
+        "Bump_2911/Bump_2911.mtx",
+        "small_spd_3x3.mtx"
+      ]
     }
   ]
 }

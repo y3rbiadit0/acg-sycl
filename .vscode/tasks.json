@@ -33,6 +33,36 @@
       "group": "build"
     },
     {
+      "label": "configure acg release",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake --fresh -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "build acg release",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "source /opt/intel/oneapi/setvars.sh --force >/dev/null && export PATH=\"/opt/dpcpp/llvm/build/bin:$PATH\" && export LD_LIBRARY_PATH=\"/opt/dpcpp/llvm/build/lib:${LD_LIBRARY_PATH:-}\" && cmake --fresh -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/opt/dpcpp/llvm/build/bin/clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build-release"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
       "label": "configure acg kernel debug",
       "type": "shell",
       "command": "bash",
