@@ -59,6 +59,28 @@ AppConfig parse_args(int argc, char **argv) {
 
     if (arg == "--tol") {
       config.solver.tolerance = std::stod(require_value(argc, argv, i, "--tol"));
+      config.solver.residual_relative_tolerance = config.solver.tolerance;
+      continue;
+    }
+
+    if (arg == "--diff-atol") {
+      config.solver.diff_absolute_tolerance = std::stod(require_value(argc, argv, i, "--diff-atol"));
+      continue;
+    }
+
+    if (arg == "--diff-rtol") {
+      config.solver.diff_relative_tolerance = std::stod(require_value(argc, argv, i, "--diff-rtol"));
+      continue;
+    }
+
+    if (arg == "--residual-atol") {
+      config.solver.residual_absolute_tolerance = std::stod(require_value(argc, argv, i, "--residual-atol"));
+      continue;
+    }
+
+    if (arg == "--residual-rtol") {
+      config.solver.residual_relative_tolerance = std::stod(require_value(argc, argv, i, "--residual-rtol"));
+      config.solver.tolerance = config.solver.residual_relative_tolerance;
       continue;
     }
 
@@ -94,7 +116,11 @@ void print_usage(std::ostream &out, const char *program_name) {
       << "  --matrix <path>             Matrix Market file to load\n"
       << "  --device <default|cpu|gpu>  SYCL device selector\n"
       << "  --profile                   Enable SYCL queue profiling\n"
-      << "  --tol <value>               Solver tolerance\n"
+      << "  --tol <value>               Relative residual tolerance\n"
+      << "  --diff-atol <value>         Absolute tolerance for solution update norm\n"
+      << "  --diff-rtol <value>         Relative tolerance for solution update norm\n"
+      << "  --residual-atol <value>     Absolute tolerance for residual norm\n"
+      << "  --residual-rtol <value>     Relative tolerance for residual norm\n"
       << "  --max-iters <n>             Maximum solver iterations\n"
       << "  --manufactured-solution     Build rhs from a known solution\n"
       << "  --seed <n>                  Seed for manufactured solution\n"

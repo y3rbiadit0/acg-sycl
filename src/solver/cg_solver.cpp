@@ -169,26 +169,6 @@ void sparse_spmv(
   }
 }
 
-void recompute_residual_and_restart(
-    sycl::queue &q,
-    oneapi::math::sparse::matrix_handle_t matrix_handle,
-    oneapi::math::sparse::dense_vector_handle_t x_handle,
-    oneapi::math::sparse::dense_vector_handle_t Ax_handle,
-    oneapi::math::sparse::spmv_descr_t spmv_descr,
-    const oneapi::math::sparse::matrix_view &view,
-    double *b,
-    double *r,
-    double *p,
-    double *Ax,
-    std::int64_t size) {
-  constexpr double alpha = 1.0;
-  constexpr double beta = 0.0;
-  sparse_spmv(q, matrix_handle, x_handle, Ax_handle, spmv_descr, view, alpha, beta);
-  oneapi::math::blas::column_major::copy(q, size, b, 1, r, 1).wait();
-  oneapi::math::blas::column_major::axpy(q, size, -1.0, Ax, 1, r, 1).wait();
-  oneapi::math::blas::column_major::copy(q, size, r, 1, p, 1).wait();
-}
-
 } // namespace
 
 SolverResult run_cg(
@@ -207,7 +187,6 @@ SolverResult run_cg(
     throw std::runtime_error("CG requires a square matrix");
   }
 
-  constexpr int residual_recompute_interval = 50;
   constexpr double one = 1.0;
   constexpr double zero = 0.0;
   const std::int64_t size = matrix.rows;
@@ -273,11 +252,15 @@ SolverResult run_cg(
   total_flops += dot_flops;
   double rho = device_dot(q, r.get(), r.get(), size, dot_result.get());
   total_flops += dot_flops;
-  const double absolute_tolerance = options.tolerance * (b_norm > 0.0 ? b_norm : 1.0);
+  const double r0_norm = std::sqrt(rho);
+  const double scaled_residual_relative_tolerance = options.residual_relative_tolerance * r0_norm;
+  const double scaled_diff_relative_tolerance = options.diff_relative_tolerance * 0.0;
 
   SolverResult result;
-  result.converged = std::sqrt(rho) <= absolute_tolerance;
-  result.final_residual = std::sqrt(rho);
+  result.final_residual = r0_norm;
+  result.converged =
+      (options.residual_absolute_tolerance > 0.0 && result.final_residual < options.residual_absolute_tolerance) ||
+      (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_relative_tolerance);
 
   for (int iteration = 0; iteration < options.max_iterations && !result.converged; ++iteration) {
     sparse_spmv(q, matrix_handle, p_handle, Ap_handle, spmv_descr, view, one, zero);
@@ -290,6 +273,9 @@ SolverResult run_cg(
     }
 
     const double alpha = rho / pAp;
+    const double p_norm = std::sqrt(device_dot(q, p.get(), p.get(), size, dot_result.get()));
+    total_flops += dot_flops;
+    const double dx_norm = std::abs(alpha) * p_norm;
     update_x_and_r(q, alpha, p.get(), Ap.get(), x.get(), r.get(), size);
     total_flops += update_x_r_flops;
 
@@ -297,23 +283,13 @@ SolverResult run_cg(
     total_flops += dot_flops;
     result.iterations = iteration + 1;
     result.final_residual = std::sqrt(rho_next);
-    result.converged = result.final_residual <= absolute_tolerance;
+    result.converged =
+        (options.diff_absolute_tolerance > 0.0 && dx_norm < options.diff_absolute_tolerance) ||
+        (options.diff_relative_tolerance > 0.0 && dx_norm < scaled_diff_relative_tolerance) ||
+        (options.residual_absolute_tolerance > 0.0 && result.final_residual < options.residual_absolute_tolerance) ||
+        (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_relative_tolerance);
     if (result.converged) {
       break;
-    }
-
-    if ((iteration + 1) % residual_recompute_interval == 0) {
-      recompute_residual_and_restart(
-          q, matrix_handle, x_handle, Ap_handle, spmv_descr, view, b.get(), r.get(), p.get(), Ap.get(), size);
-      total_flops += matrix_vector_flops + update_p_flops;
-      rho = device_dot(q, r.get(), r.get(), size, dot_result.get());
-      total_flops += dot_flops;
-      result.final_residual = std::sqrt(rho);
-      result.converged = result.final_residual <= absolute_tolerance;
-      if (result.converged) {
-        break;
-      }
-      continue;
     }
 
     const double beta = rho_next / rho;
