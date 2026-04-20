@@ -207,26 +207,14 @@ CsrMatrix<double> read_matrix_market(const std::string &path) {
     return std::tie(lhs.row, lhs.col) < std::tie(rhs.row, rhs.col);
   });
 
-  std::vector<CoordinateEntry> merged_entries;
-  merged_entries.reserve(entries.size());
-  for (const CoordinateEntry &entry : entries) {
-    if (!merged_entries.empty() &&
-        merged_entries.back().row == entry.row &&
-        merged_entries.back().col == entry.col) {
-      merged_entries.back().value += entry.value;
-      continue;
-    }
-    merged_entries.push_back(entry);
-  }
-
   CsrMatrix<double> matrix;
   matrix.rows = rows;
   matrix.cols = cols;
   matrix.row_ptr.assign(static_cast<std::size_t>(rows + 1), 0);
-  matrix.col_idx.reserve(merged_entries.size());
-  matrix.values.reserve(merged_entries.size());
+  matrix.col_idx.reserve(entries.size());
+  matrix.values.reserve(entries.size());
 
-  for (const CoordinateEntry &entry : merged_entries) {
+  for (const CoordinateEntry &entry : entries) {
     ++matrix.row_ptr[static_cast<std::size_t>(entry.row + 1)];
     matrix.col_idx.push_back(static_cast<std::int32_t>(entry.col));
     matrix.values.push_back(entry.value);

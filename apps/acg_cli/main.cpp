@@ -40,10 +40,17 @@ int main(int argc, char **argv) {
               << " nnz=" << matrix.nnz()
               << " load_time=" << matrix_load_time_seconds << "s\n";
 
+
+    
+
     const acg::solver::SolverResult result = acg::solver::run_cg(matrix, ctx, config.solver);
+
     std::cout << "solver: converged=" << (result.converged ? "true" : "false")
               << " iterations=" << result.iterations
               << " residual=" << result.final_residual
+              << " relative_error=" << result.relative_solution_error
+              << " flops=" << result.total_flops
+              << " gflops=" << result.flop_rate_gflops
               << " time=" << result.solve_time_seconds << "s\n";
     return result.converged ? 0 : 1;
   } catch (const std::exception &e) {
