@@ -106,69 +106,6 @@ void update_p(sycl::queue &q, double beta, double *r, double *p, std::int64_t si
   oneapi::math::blas::column_major::axpy(q, size, 1.0, r, 1, p, 1).wait();
 }
 
-void sparse_spmv(
-    sycl::queue &q,
-    oneapi::math::sparse::matrix_handle_t matrix_handle,
-    oneapi::math::sparse::dense_vector_handle_t x_handle,
-    oneapi::math::sparse::dense_vector_handle_t y_handle,
-    oneapi::math::sparse::spmv_descr_t spmv_descr,
-    const oneapi::math::sparse::matrix_view &view,
-    const double &alpha,
-    const double &beta) {
-  std::size_t workspace_size = 0;
-  oneapi::math::sparse::spmv_buffer_size(
-      q,
-      oneapi::math::transpose::nontrans,
-      &alpha,
-      view,
-      matrix_handle,
-      x_handle,
-      &beta,
-      y_handle,
-      oneapi::math::sparse::spmv_alg::default_alg,
-      spmv_descr,
-      workspace_size);
-
-  void *workspace = nullptr;
-  if (workspace_size > 0) {
-    workspace = sycl::malloc_device<std::uint8_t>(workspace_size, q);
-    if (workspace == nullptr) {
-      throw std::runtime_error("failed to allocate oneMath SPMV workspace");
-    }
-
-    oneapi::math::sparse::spmv_optimize(
-        q,
-        oneapi::math::transpose::nontrans,
-        &alpha,
-        view,
-        matrix_handle,
-        x_handle,
-        &beta,
-        y_handle,
-        oneapi::math::sparse::spmv_alg::default_alg,
-        spmv_descr,
-        workspace)
-        .wait();
-  }
-
-  oneapi::math::sparse::spmv(
-      q,
-      oneapi::math::transpose::nontrans,
-      &alpha,
-      view,
-      matrix_handle,
-      x_handle,
-      &beta,
-      y_handle,
-      oneapi::math::sparse::spmv_alg::default_alg,
-      spmv_descr)
-      .wait();
-
-  if (workspace != nullptr) {
-    sycl::free(workspace, q);
-  }
-}
-
 } // namespace
 
 SolverResult run_cg(
@@ -194,7 +131,9 @@ SolverResult run_cg(
   const double matrix_vector_flops = 2.0 * static_cast<double>(matrix.nnz());
   const double dot_flops = 2.0 * static_cast<double>(vector_size);
   const double update_x_r_flops = 4.0 * static_cast<double>(vector_size);
-  const double update_p_flops = 2.0 * static_cast<double>(vector_size);
+  // scal (n) + axpy (2n) = 3n; same as CUDA daypx which is 1 fused mul-add per element = 2n.
+  // Use 3n (accurate) since we issue two separate BLAS calls.
+  const double update_p_flops = 3.0 * static_cast<double>(vector_size);
 
   const std::vector<double> x_exact_host = generate_exact_solution(vector_size, options);
   std::vector<std::int64_t> col_idx_host(matrix.col_idx.begin(), matrix.col_idx.end());
@@ -227,7 +166,11 @@ SolverResult run_cg(
   oneapi::math::sparse::dense_vector_handle_t r_handle = nullptr;
   oneapi::math::sparse::dense_vector_handle_t p_handle = nullptr;
   oneapi::math::sparse::dense_vector_handle_t Ap_handle = nullptr;
-  oneapi::math::sparse::spmv_descr_t spmv_descr = nullptr;
+  // Two descriptors: one for the one-shot b=A*x_exact call, one for the CG loop.
+  // oneMath locks a descriptor to the exact vector handles used in spmv_optimize,
+  // so we cannot share a single descriptor between the two calls.
+  oneapi::math::sparse::spmv_descr_t mfg_descr = nullptr;
+  oneapi::math::sparse::spmv_descr_t cg_descr = nullptr;
   const oneapi::math::sparse::matrix_view view(oneapi::math::sparse::matrix_descr::general);
 
   oneapi::math::sparse::init_csr_matrix(
@@ -239,10 +182,47 @@ SolverResult run_cg(
   oneapi::math::sparse::init_dense_vector(q, &r_handle, size, r.get());
   oneapi::math::sparse::init_dense_vector(q, &p_handle, size, p.get());
   oneapi::math::sparse::init_dense_vector(q, &Ap_handle, size, Ap.get());
-  oneapi::math::sparse::init_spmv_descr(q, &spmv_descr);
+  oneapi::math::sparse::init_spmv_descr(q, &mfg_descr);
+  oneapi::math::sparse::init_spmv_descr(q, &cg_descr);
+
+  // Helper: buffer_size + optimize + return workspace (kept alive by caller).
+  auto setup_spmv = [&](oneapi::math::sparse::spmv_descr_t descr,
+                        oneapi::math::sparse::dense_vector_handle_t x_vec,
+                        oneapi::math::sparse::dense_vector_handle_t y_vec) -> UsmPtr<std::uint8_t> {
+    std::size_t ws_size = 0;
+    oneapi::math::sparse::spmv_buffer_size(
+        q, oneapi::math::transpose::nontrans, &one, view,
+        matrix_handle, x_vec, &zero, y_vec,
+        oneapi::math::sparse::spmv_alg::default_alg, descr, ws_size);
+    UsmPtr<std::uint8_t> ws(nullptr, UsmDeleter<std::uint8_t>{&q});
+    void *raw_ws = nullptr;
+    if (ws_size > 0) {
+      ws = make_device_array<std::uint8_t>(q, ws_size);
+      raw_ws = ws.get();
+    }
+    oneapi::math::sparse::spmv_optimize(
+        q, oneapi::math::transpose::nontrans, &one, view,
+        matrix_handle, x_vec, &zero, y_vec,
+        oneapi::math::sparse::spmv_alg::default_alg, descr, raw_ws)
+        .wait();
+    return ws;
+  };
+
+  // Optimize mfg_descr for x_exact->b (used once for manufactured solution).
+  // Optimize cg_descr for p->Ap (used every CG iteration; workspace kept alive).
+  // Both match the CUDA pattern: cusparseSpMV_bufferSize + cusparseSpMV_preprocess
+  // once per (matrix, x-vector, y-vector) triple, buffer kept alive for all calls.
+  auto mfg_workspace = options.manufactured_solution
+                           ? setup_spmv(mfg_descr, x_exact_handle, b_handle)
+                           : UsmPtr<std::uint8_t>(nullptr, UsmDeleter<std::uint8_t>{&q});
+  auto cg_workspace = setup_spmv(cg_descr, p_handle, Ap_handle);
 
   if (options.manufactured_solution) {
-    sparse_spmv(q, matrix_handle, x_exact_handle, b_handle, spmv_descr, view, one, zero);
+    oneapi::math::sparse::spmv(
+        q, oneapi::math::transpose::nontrans, &one, view,
+        matrix_handle, x_exact_handle, &zero, b_handle,
+        oneapi::math::sparse::spmv_alg::default_alg, mfg_descr)
+        .wait();
   }
 
   initialize_iteration_vectors(q, b.get(), x.get(), r.get(), p.get(), size);
@@ -253,17 +233,35 @@ SolverResult run_cg(
   double rho = device_dot(q, r.get(), r.get(), size, dot_result.get());
   total_flops += dot_flops;
   const double r0_norm = std::sqrt(rho);
-  const double scaled_residual_relative_tolerance = options.residual_relative_tolerance * r0_norm;
-  const double scaled_diff_relative_tolerance = options.diff_relative_tolerance * 0.0;
+
+  // Match the CUDA stopping criterion: residualrtol is scaled by ||r0|| once.
+  const double scaled_residual_rtol = options.residual_relative_tolerance * r0_norm;
+  const double scaled_diff_rtol =
+      (options.diff_relative_tolerance > 0.0 && r0_norm > 0.0)
+          ? options.diff_relative_tolerance * r0_norm
+          : 0.0;
 
   SolverResult result;
   result.final_residual = r0_norm;
   result.converged =
       (options.residual_absolute_tolerance > 0.0 && result.final_residual < options.residual_absolute_tolerance) ||
-      (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_relative_tolerance);
+      (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_rtol);
 
+  const auto solve_start = std::chrono::steady_clock::now();
   for (int iteration = 0; iteration < options.max_iterations && !result.converged; ++iteration) {
-    sparse_spmv(q, matrix_handle, p_handle, Ap_handle, spmv_descr, view, one, zero);
+    // t = A * p  (fresh: beta=0 zeros out Ap before accumulating)
+    oneapi::math::sparse::spmv(
+        q,
+        oneapi::math::transpose::nontrans,
+        &one,
+        view,
+        matrix_handle,
+        p_handle,
+        &zero,
+        Ap_handle,
+        oneapi::math::sparse::spmv_alg::default_alg,
+        cg_descr)
+        .wait();
     total_flops += matrix_vector_flops;
 
     const double pAp = device_dot(q, p.get(), Ap.get(), size, dot_result.get());
@@ -273,9 +271,8 @@ SolverResult run_cg(
     }
 
     const double alpha = rho / pAp;
-    const double p_norm = std::sqrt(device_dot(q, p.get(), p.get(), size, dot_result.get()));
-    total_flops += dot_flops;
-    const double dx_norm = std::abs(alpha) * p_norm;
+
+    // Match CUDA order: update r first, then x, then compute new rho, then p.
     update_x_and_r(q, alpha, p.get(), Ap.get(), x.get(), r.get(), size);
     total_flops += update_x_r_flops;
 
@@ -284,10 +281,10 @@ SolverResult run_cg(
     result.iterations = iteration + 1;
     result.final_residual = std::sqrt(rho_next);
     result.converged =
-        (options.diff_absolute_tolerance > 0.0 && dx_norm < options.diff_absolute_tolerance) ||
-        (options.diff_relative_tolerance > 0.0 && dx_norm < scaled_diff_relative_tolerance) ||
+        (options.diff_absolute_tolerance > 0.0 && std::abs(alpha) * std::sqrt(rho) < options.diff_absolute_tolerance) ||
+        (scaled_diff_rtol > 0.0 && std::abs(alpha) * std::sqrt(rho) < scaled_diff_rtol) ||
         (options.residual_absolute_tolerance > 0.0 && result.final_residual < options.residual_absolute_tolerance) ||
-        (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_relative_tolerance);
+        (options.residual_relative_tolerance > 0.0 && result.final_residual < scaled_residual_rtol);
     if (result.converged) {
       break;
     }
@@ -301,7 +298,8 @@ SolverResult run_cg(
   std::vector<double> x_host(vector_size, 0.0);
   copy_to_host(q, x.get(), x_host.data(), vector_size * sizeof(double));
 
-  oneapi::math::sparse::release_spmv_descr(q, spmv_descr).wait();
+  oneapi::math::sparse::release_spmv_descr(q, cg_descr).wait();
+  if (mfg_descr) oneapi::math::sparse::release_spmv_descr(q, mfg_descr).wait();
   oneapi::math::sparse::release_dense_vector(q, Ap_handle).wait();
   oneapi::math::sparse::release_dense_vector(q, p_handle).wait();
   oneapi::math::sparse::release_dense_vector(q, r_handle).wait();
@@ -326,7 +324,8 @@ SolverResult run_cg(
   }
 
   const auto end = std::chrono::steady_clock::now();
-  result.solve_time_seconds = std::chrono::duration<double>(end - start).count();
+  result.solve_time_seconds = std::chrono::duration<double>(end - solve_start).count();
+  result.total_time_seconds = std::chrono::duration<double>(end - start).count();
   result.total_flops = total_flops;
   result.flop_rate_gflops = result.solve_time_seconds > 0.0 ? total_flops / result.solve_time_seconds / 1.0e9 : 0.0;
   return result;

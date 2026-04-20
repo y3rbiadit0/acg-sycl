@@ -51,7 +51,8 @@ int main(int argc, char **argv) {
               << " relative_error=" << result.relative_solution_error
               << " flops=" << result.total_flops
               << " gflops=" << result.flop_rate_gflops
-              << " time=" << result.solve_time_seconds << "s\n";
+              << " solve_time=" << result.solve_time_seconds << "s"
+              << " total_time=" << result.total_time_seconds << "s\n";
     return result.converged ? 0 : 1;
   } catch (const std::exception &e) {
     std::cerr << "error: " << e.what() << '\n';
