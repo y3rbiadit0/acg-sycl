@@ -80,7 +80,10 @@
         "--matrix",
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
-        "gpu"
+        "gpu",
+        "--manufactured-solution",
+        "--max-iters",
+        "50000"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
