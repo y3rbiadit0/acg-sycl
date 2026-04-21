@@ -17,7 +17,11 @@ add_library(acg_core STATIC
   src/cli/parse_args.cpp
   src/matrix/matrix_market_reader.cpp
   src/runtime/queue_factory.cpp
+  src/solver/algorithms/cg_single_gpu.cpp
+  src/solver/backends/onemath_cuda_backend.cpp
   src/solver/cg_solver.cpp
+  src/solver/rhs_builder.cpp
+  src/solver/stopping_criteria.cpp
 )
 
 target_include_directories(acg_core PUBLIC include)
