@@ -1,5 +1,6 @@
 #include <chrono>
 #include <exception>
+#include <iomanip>
 #include <iostream>
 #include <utility>
 
@@ -8,6 +9,7 @@
 #include "acg/runtime/queue_factory.hpp"
 #include "acg/runtime/run_context.hpp"
 #include "acg/solver/cg_solver.hpp"
+#include "acg/solver/perf_breakdown.hpp"
 
 int main(int argc, char **argv) {
   try {
@@ -53,6 +55,21 @@ int main(int argc, char **argv) {
               << " gflops=" << result.flop_rate_gflops
               << " solve_time=" << result.solve_time_seconds << "s"
               << " total_time=" << result.total_time_seconds << "s\n";
+
+    const auto print_op = [](const char *name, const acg::solver::OpStats &s) {
+      std::cout << std::fixed << std::setprecision(6)
+                << name << ": "
+                << s.time_seconds << " seconds/proc "
+                << s.count << " times/proc "
+                << s.bytes << " B/proc "
+                << std::setprecision(3) << s.bandwidth_gbs() << " GB/s/proc\n";
+    };
+    print_op("spmv", result.perf.spmv);
+    print_op("dot",  result.perf.dot);
+    print_op("nrm2", result.perf.nrm2);
+    print_op("axpy", result.perf.axpy);
+    print_op("copy", result.perf.copy);
+
     return result.converged ? 0 : 1;
   } catch (const std::exception &e) {
     std::cerr << "error: " << e.what() << '\n';

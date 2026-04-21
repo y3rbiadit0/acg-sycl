@@ -1,6 +1,8 @@
 #ifndef ACG_SOLVER_SOLVER_RESULT_HPP
 #define ACG_SOLVER_SOLVER_RESULT_HPP
 
+#include "acg/solver/perf_breakdown.hpp"
+
 namespace acg::solver {
 
 struct SolverResult {
@@ -12,6 +14,7 @@ struct SolverResult {
   double relative_solution_error = 0.0;
   double total_flops = 0.0;
   double flop_rate_gflops = 0.0;     // based on solve_time_seconds
+  PerfBreakdown perf;
 };
 
 } // namespace acg::solver
