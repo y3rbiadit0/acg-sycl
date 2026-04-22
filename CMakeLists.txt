@@ -11,7 +11,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(ACG_ENABLE_SYCL "Build with SYCL support" ON)
 option(ACG_ENABLE_DEVICE_DEBUG "Build SYCL kernels with debug-friendly flags" OFF)
 set(ACG_SYCL_TARGET "" CACHE STRING "SYCL device target")
+set(ACG_EXTRA_COMPILE_FLAGS "" CACHE STRING "Extra compiler flags for the project")
+set(ACG_EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags for the project")
 set(oneMath_ROOT "/opt/oneMath/install" CACHE PATH "oneMath install root")
+
+if(ACG_EXTRA_COMPILE_FLAGS)
+  separate_arguments(ACG_EXTRA_COMPILE_FLAGS_LIST NATIVE_COMMAND "${ACG_EXTRA_COMPILE_FLAGS}")
+endif()
+
+if(ACG_EXTRA_LINK_FLAGS)
+  separate_arguments(ACG_EXTRA_LINK_FLAGS_LIST NATIVE_COMMAND "${ACG_EXTRA_LINK_FLAGS}")
+endif()
 
 add_library(acg_core STATIC
   src/cli/parse_args.cpp
@@ -31,6 +41,14 @@ if(ACG_ENABLE_SYCL)
 
   target_compile_options(acg_core PUBLIC -fsycl)
   target_link_options(acg_core PUBLIC -fsycl)
+
+  if(ACG_EXTRA_COMPILE_FLAGS)
+    target_compile_options(acg_core PUBLIC ${ACG_EXTRA_COMPILE_FLAGS_LIST})
+  endif()
+
+  if(ACG_EXTRA_LINK_FLAGS)
+    target_link_options(acg_core PUBLIC ${ACG_EXTRA_LINK_FLAGS_LIST})
+  endif()
 
   if(ACG_SYCL_TARGET)
     target_compile_options(acg_core PUBLIC -fsycl-targets=${ACG_SYCL_TARGET})

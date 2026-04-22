@@ -27,8 +27,9 @@ export METIS_DIR="$HOME/thesis/local_gcc"
 export METIS_LIB_DIR="${METIS_DIR}/lib64"
 export METIS_LIBRARIES="${METIS_LIB_DIR}/libmetis.a;${METIS_LIB_DIR}/libGKlib.a"
 
-# GCC runtime libs
-export GCC12_LIB=/leonardo/prod/spack/06/install/0.22/linux-rhel8-icelake/gcc-8.5.0/gcc-12.2.0-lkcazt4letxjj4s7nlhzryoyivevsatz/lib64
+# GCC toolchain and runtime libs
+export GCC12_ROOT="${GCC_HOME:?gcc/12.2.0 module must define GCC_HOME}"
+export GCC12_LIB="${GCC12_ROOT}/lib64"
 
 # CUDA / SYCL
 export CUDA_ROOT="$CUDA_HOME"
@@ -39,7 +40,9 @@ export NVIDIA_GPU_ARCH="sm_80"
 export ONEAPI_DEVICE_SELECTOR="cuda:*"
 export SYCL_DEVICE_FILTER="cuda"
 
-export SYCL_FLAGS="-fsycl -fsycl-targets=${SYCL_TARGET} -Xsycl-target-backend --cuda-gpu-arch=${NVIDIA_GPU_ARCH} -L${GCC12_LIB} -Wl,-rpath,${GCC12_LIB}"
+export ACG_EXTRA_COMPILE_FLAGS="--gcc-toolchain=${GCC12_ROOT} -Xsycl-target-backend=${SYCL_TARGET} --cuda-gpu-arch=${NVIDIA_GPU_ARCH}"
+export ACG_EXTRA_LINK_FLAGS="--gcc-toolchain=${GCC12_ROOT} -Xsycl-target-backend=${SYCL_TARGET} --cuda-gpu-arch=${NVIDIA_GPU_ARCH} -L${GCC12_LIB} -Wl,-rpath,${GCC12_LIB}"
+export SYCL_FLAGS="${ACG_EXTRA_COMPILE_FLAGS}"
 
 # Search paths
 export PATH="$DPCPP_INSTALL/bin:$PATH"
