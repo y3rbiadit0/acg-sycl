@@ -24,7 +24,7 @@
         },
         {
           "name": "LD_LIBRARY_PATH",
-          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
         }
       ],
       "setupCommands": [
@@ -59,7 +59,7 @@
         },
         {
           "name": "LD_LIBRARY_PATH",
-          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
         }
       ],
       "setupCommands": [
@@ -96,7 +96,7 @@
         },
         {
           "name": "LD_LIBRARY_PATH",
-          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
         }
       ],
       "preLaunchTask": "build acg release"
@@ -132,7 +132,7 @@
         },
         {
           "name": "LD_LIBRARY_PATH",
-          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
         }
       ],
       "setupCommands": [
@@ -176,7 +176,7 @@
         },
         {
           "name": "LD_LIBRARY_PATH",
-          "value": "/opt/dpcpp/llvm/build/lib:${env:LD_LIBRARY_PATH}"
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
         }
       ],
       "setupCommands": [
