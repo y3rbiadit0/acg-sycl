@@ -9,6 +9,7 @@ struct RunContext {
   sycl::queue queue;
   int rank = 0;
   int size = 1;
+  int local_rank = 0;
   bool profiling_enabled = false;
 };
 

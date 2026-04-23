@@ -1,10 +1,23 @@
 #include "acg/solver/backends/onemath_cuda_backend.hpp"
 
+#include <sstream>
 #include <stdexcept>
 
 #include <oneapi/math.hpp>
 
 namespace acg::solver::backends {
+
+namespace {
+
+void expect_equal_size(std::int64_t expected, std::int64_t actual, const char *operation) {
+  if (expected != actual) {
+    std::ostringstream message;
+    message << operation << " size mismatch: expected " << expected << ", got " << actual;
+    throw std::runtime_error(message.str());
+  }
+}
+
+} // namespace
 
 OnemathCudaBackend::OnemathCudaBackend(sycl::queue &queue, const acg::matrix::CsrMatrix<double> &matrix)
     : queue_(&queue), rows_(matrix.rows), cols_(matrix.cols), nnz_(static_cast<std::int64_t>(matrix.nnz())),
@@ -60,42 +73,50 @@ std::int64_t OnemathCudaBackend::size() const noexcept { return rows_; }
 
 std::int64_t OnemathCudaBackend::nnz() const noexcept { return nnz_; }
 
-DeviceVector OnemathCudaBackend::create_vector() { return make_vector_from_pointer(make_device_array<double>(rows_)); }
+std::int64_t OnemathCudaBackend::columns() const noexcept { return cols_; }
+
+DeviceVector OnemathCudaBackend::create_vector() { return create_vector(rows_); }
+
+DeviceVector OnemathCudaBackend::create_vector(std::int64_t size) {
+  return make_vector_from_pointer(make_device_array<double>(static_cast<std::size_t>(size)), size);
+}
 
 DeviceVector OnemathCudaBackend::create_vector_from_host(const std::vector<double> &host) {
-  if (host.size() != static_cast<std::size_t>(rows_)) {
-    throw std::runtime_error("host vector size does not match backend size");
-  }
-  DeviceVector vector = create_vector();
+  DeviceVector vector = create_vector(static_cast<std::int64_t>(host.size()));
   queue_->memcpy(vector.data, host.data(), host.size() * sizeof(double)).wait();
   return vector;
 }
 
 void OnemathCudaBackend::download_vector(const DeviceVector &src, std::vector<double> &dst) {
-  dst.resize(static_cast<std::size_t>(rows_));
+  dst.resize(static_cast<std::size_t>(src.size));
   queue_->memcpy(dst.data(), src.data, dst.size() * sizeof(double)).wait();
 }
 
-void OnemathCudaBackend::fill_zero(DeviceVector &x) { queue_->fill(x.data, 0.0, static_cast<std::size_t>(rows_)).wait(); }
+void OnemathCudaBackend::fill_zero(DeviceVector &x) { queue_->fill(x.data, 0.0, static_cast<std::size_t>(x.size)).wait(); }
 
 void OnemathCudaBackend::copy(const DeviceVector &src, DeviceVector &dst) {
-  oneapi::math::blas::column_major::copy(*queue_, rows_, src.data, 1, dst.data, 1).wait();
+  expect_equal_size(src.size, dst.size, "copy");
+  oneapi::math::blas::column_major::copy(*queue_, src.size, src.data, 1, dst.data, 1).wait();
 }
 
 void OnemathCudaBackend::scal(double alpha, DeviceVector &x) {
-  oneapi::math::blas::column_major::scal(*queue_, rows_, alpha, x.data, 1).wait();
+  oneapi::math::blas::column_major::scal(*queue_, x.size, alpha, x.data, 1).wait();
 }
 
 void OnemathCudaBackend::axpy(double alpha, const DeviceVector &x, DeviceVector &y) {
-  oneapi::math::blas::column_major::axpy(*queue_, rows_, alpha, x.data, 1, y.data, 1).wait();
+  expect_equal_size(x.size, y.size, "axpy");
+  oneapi::math::blas::column_major::axpy(*queue_, x.size, alpha, x.data, 1, y.data, 1).wait();
 }
 
 double OnemathCudaBackend::dot(const DeviceVector &x, const DeviceVector &y) {
-  oneapi::math::blas::column_major::dot(*queue_, rows_, x.data, 1, y.data, 1, dot_result_).wait();
+  expect_equal_size(x.size, y.size, "dot");
+  oneapi::math::blas::column_major::dot(*queue_, x.size, x.data, 1, y.data, 1, dot_result_).wait();
   return *dot_result_;
 }
 
 void OnemathCudaBackend::spmv(const DeviceVector &x, DeviceVector &y) {
+  expect_equal_size(cols_, x.size, "spmv input");
+  expect_equal_size(rows_, y.size, "spmv output");
   optimize_spmv_for(x, y);
   oneapi::math::sparse::spmv(
       *queue_, oneapi::math::transpose::nontrans, &one_, view_, matrix_handle_, x.handle, &zero_, y.handle,
@@ -129,9 +150,9 @@ T *OnemathCudaBackend::make_shared_scalar(T initial_value) {
   return ptr;
 }
 
-DeviceVector OnemathCudaBackend::make_vector_from_pointer(double *ptr) {
-  DeviceVector vector{.data = ptr, .handle = nullptr};
-  oneapi::math::sparse::init_dense_vector(*queue_, &vector.handle, rows_, vector.data);
+DeviceVector OnemathCudaBackend::make_vector_from_pointer(double *ptr, std::int64_t size) {
+  DeviceVector vector{.data = ptr, .handle = nullptr, .size = size};
+  oneapi::math::sparse::init_dense_vector(*queue_, &vector.handle, size, vector.data);
   vectors_.push_back(vector);
   return vector;
 }

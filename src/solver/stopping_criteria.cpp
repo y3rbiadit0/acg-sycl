@@ -2,6 +2,14 @@
 
 namespace acg::solver {
 
+namespace {
+
+double safe_relative_ratio(double numerator, double denominator) {
+  return denominator > 0.0 ? numerator / denominator : 0.0;
+}
+
+} // namespace
+
 CgThresholds make_cg_thresholds(const SolverOptions &options, double x0_norm, double r0_norm) {
   CgThresholds thresholds;
   thresholds.diff_absolute = options.diff_absolute_tolerance;
@@ -15,8 +23,22 @@ CgThresholds make_cg_thresholds(const SolverOptions &options, double x0_norm, do
 bool cg_converged(const CgIterationMetrics &metrics, const CgThresholds &thresholds) {
   return (thresholds.diff_absolute > 0.0 && metrics.dx_norm < thresholds.diff_absolute) ||
          (thresholds.diff_relative_scaled > 0.0 && metrics.dx_norm < thresholds.diff_relative_scaled) ||
-         (thresholds.residual_absolute > 0.0 && metrics.residual_norm < thresholds.residual_absolute) ||
-         (thresholds.residual_relative_scaled > 0.0 && metrics.residual_norm < thresholds.residual_relative_scaled);
+         cg_residual_converged(metrics.residual_norm, thresholds);
+}
+
+bool cg_residual_converged(double residual_norm, const CgThresholds &thresholds) {
+  return (thresholds.residual_absolute > 0.0 && residual_norm < thresholds.residual_absolute) ||
+         (thresholds.residual_relative_scaled > 0.0 && residual_norm < thresholds.residual_relative_scaled);
+}
+
+ResidualDiagnostics make_residual_diagnostics(double rhs_norm, double initial_residual, double final_residual) {
+  return ResidualDiagnostics{
+      .rhs_norm = rhs_norm,
+      .initial_residual = initial_residual,
+      .final_residual = final_residual,
+      .relative_to_initial = safe_relative_ratio(final_residual, initial_residual),
+      .relative_to_rhs = safe_relative_ratio(final_residual, rhs_norm),
+  };
 }
 
 } // namespace acg::solver

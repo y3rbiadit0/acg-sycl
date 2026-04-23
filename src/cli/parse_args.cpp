@@ -33,6 +33,7 @@ std::string require_value(int argc, char **argv, int &index, const char *option)
 
 AppConfig parse_args(int argc, char **argv) {
   AppConfig config;
+  bool saw_residual_rtol = false;
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];
@@ -57,14 +58,13 @@ AppConfig parse_args(int argc, char **argv) {
       continue;
     }
 
-    if (arg == "--tol") {
-      config.solver.tolerance = std::stod(require_value(argc, argv, i, "--tol"));
-      config.solver.residual_relative_tolerance = config.solver.tolerance;
+    if (arg == "--diff-atol") {
+      config.solver.diff_absolute_tolerance = std::stod(require_value(argc, argv, i, "--diff-atol"));
       continue;
     }
 
-    if (arg == "--diff-atol") {
-      config.solver.diff_absolute_tolerance = std::stod(require_value(argc, argv, i, "--diff-atol"));
+    if (arg == "--log-every") {
+      config.solver.log_every = std::stoi(require_value(argc, argv, i, "--log-every"));
       continue;
     }
 
@@ -80,7 +80,12 @@ AppConfig parse_args(int argc, char **argv) {
 
     if (arg == "--residual-rtol") {
       config.solver.residual_relative_tolerance = std::stod(require_value(argc, argv, i, "--residual-rtol"));
-      config.solver.tolerance = config.solver.residual_relative_tolerance;
+      saw_residual_rtol = true;
+      continue;
+    }
+
+    if (arg == "--solution-rtol") {
+      config.solver.solution_relative_tolerance = std::stod(require_value(argc, argv, i, "--solution-rtol"));
       continue;
     }
 
@@ -105,6 +110,9 @@ AppConfig parse_args(int argc, char **argv) {
   if (config.matrix_path.empty()) {
     throw std::runtime_error("--matrix is required");
   }
+  if (!saw_residual_rtol) {
+    throw std::runtime_error("--residual-rtol is required");
+  }
 
   return config;
 }
@@ -116,11 +124,12 @@ void print_usage(std::ostream &out, const char *program_name) {
       << "  --matrix <path>             Matrix Market file to load\n"
       << "  --device <default|cpu|gpu>  SYCL device selector\n"
       << "  --profile                   Enable SYCL queue profiling\n"
-      << "  --tol <value>               Relative residual tolerance\n"
       << "  --diff-atol <value>         Absolute tolerance for solution update norm\n"
       << "  --diff-rtol <value>         Relative tolerance for solution update norm\n"
+      << "  --log-every <n>             Print progress every n iterations\n"
       << "  --residual-atol <value>     Absolute tolerance for residual norm\n"
-      << "  --residual-rtol <value>     Relative tolerance for residual norm\n"
+      << "  --residual-rtol <value>     Relative tolerance for residual norm (required)\n"
+      << "  --solution-rtol <value>     Relative solution-error tolerance in manufactured mode\n"
       << "  --max-iters <n>             Maximum solver iterations\n"
       << "  --manufactured-solution     Build rhs from a known solution\n"
       << "  --seed <n>                  Seed for manufactured solution\n"

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ACG_ENABLE_SYCL "Build with SYCL support" ON)
+option(ACG_ENABLE_MPI "Build with MPI support" ON)
 option(ACG_ENABLE_DEVICE_DEBUG "Build SYCL kernels with debug-friendly flags" OFF)
 set(ACG_SYCL_TARGET "" CACHE STRING "SYCL device target")
 set(ACG_EXTRA_COMPILE_FLAGS "" CACHE STRING "Extra compiler flags for the project")
@@ -26,7 +27,10 @@ endif()
 add_library(acg_core STATIC
   src/cli/parse_args.cpp
   src/matrix/matrix_market_reader.cpp
+  src/matrix/distributed_partition.cpp
   src/runtime/queue_factory.cpp
+  src/runtime/mpi_runtime.cpp
+  src/solver/algorithms/cg_multi_gpu_mpi.cpp
   src/solver/algorithms/cg_single_gpu.cpp
   src/solver/backends/onemath_cuda_backend.cpp
   src/solver/cg_solver.cpp
@@ -35,6 +39,12 @@ add_library(acg_core STATIC
 )
 
 target_include_directories(acg_core PUBLIC include)
+
+if(ACG_ENABLE_MPI)
+  find_package(MPI REQUIRED COMPONENTS CXX)
+  target_link_libraries(acg_core PUBLIC MPI::MPI_CXX)
+  target_compile_definitions(acg_core PUBLIC ACG_HAVE_MPI=1)
+endif()
 
 if(ACG_ENABLE_SYCL)
   find_package(oneMath REQUIRED PATHS ${oneMath_ROOT}/lib/cmake/oneMath NO_DEFAULT_PATH)

@@ -7,7 +7,7 @@
 
 namespace acg::runtime {
 
-sycl::queue make_queue(DeviceKind device_kind, bool enable_profiling);
+sycl::queue make_queue(DeviceKind device_kind, bool enable_profiling, int device_ordinal = 0);
 const char *to_string(DeviceKind device_kind);
 
 } // namespace acg::runtime

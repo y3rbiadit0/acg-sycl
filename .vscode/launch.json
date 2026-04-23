@@ -10,7 +10,9 @@
         "--matrix",
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
-        "gpu"
+        "gpu",
+        "--residual-rtol",
+        "1e-6"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
@@ -45,7 +47,9 @@
         "--matrix",
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
-        "gpu"
+        "gpu",
+        "--residual-rtol",
+        "1e-6"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
@@ -81,6 +85,44 @@
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "gpu",
+        "--residual-rtol",
+        "1e-6",
+        "--manufactured-solution",
+        "--max-iters",
+        "50000"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "noDebug": true,
+      "environment": [
+        {
+          "name": "ONEAPI_DEVICE_SELECTOR",
+          "value": "cuda:*"
+        },
+        {
+          "name": "LD_LIBRARY_PATH",
+          "value": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
+        }
+      ],
+      "preLaunchTask": "build acg release"
+    },
+    {
+      "name": "Run acg MPI (release)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/usr/bin/env",
+      "args": [
+        "mpirun",
+        "-n",
+        "${input:mpiRanks}",
+        "${workspaceFolder}/build-release/acg",
+        "--matrix",
+        "${workspaceFolder}/data/matrices/${input:matrixFile}",
+        "--device",
+        "gpu",
+        "--residual-rtol",
+        "1e-6",
         "--manufactured-solution",
         "--max-iters",
         "50000"
@@ -110,7 +152,9 @@
         "--matrix",
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
-        "gpu"
+        "gpu",
+        "--residual-rtol",
+        "1e-6"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
@@ -158,7 +202,9 @@
         "--matrix",
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
-        "cpu"
+        "cpu",
+        "--residual-rtol",
+        "1e-6"
       ],
       "cwd": "${workspaceFolder}",
       "stopAtEntry": false,
@@ -196,12 +242,23 @@
   ],
   "inputs": [
     {
+      "id": "mpiRanks",
+      "type": "pickString",
+      "description": "Select MPI rank count",
+      "default": "2",
+      "options": [
+        "2",
+        "4"
+      ]
+    },
+    {
       "id": "matrixFile",
       "type": "pickString",
       "description": "Select Matrix Market file",
       "default": "Bump_2911/Bump_2911.mtx",
       "options": [
         "Bump_2911/Bump_2911.mtx",
+        "tridiag_spd_16x16.mtx",
         "small_spd_3x3.mtx"
       ]
     }

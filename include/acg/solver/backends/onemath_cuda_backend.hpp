@@ -22,8 +22,10 @@ public:
 
   std::int64_t size() const noexcept override;
   std::int64_t nnz() const noexcept override;
+  std::int64_t columns() const noexcept;
 
   DeviceVector create_vector() override;
+  DeviceVector create_vector(std::int64_t size);
   DeviceVector create_vector_from_host(const std::vector<double> &host) override;
   void download_vector(const DeviceVector &src, std::vector<double> &dst) override;
 
@@ -48,7 +50,7 @@ private:
   template <typename T>
   T *make_shared_scalar(T initial_value = T{});
 
-  DeviceVector make_vector_from_pointer(double *ptr);
+  DeviceVector make_vector_from_pointer(double *ptr, std::int64_t size);
   void optimize_spmv_for(const DeviceVector &x, const DeviceVector &y);
 
   sycl::queue *queue_;

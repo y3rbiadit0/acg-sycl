@@ -27,6 +27,10 @@ struct PerfBreakdown {
   OpStats nrm2;
   OpStats axpy;
   OpStats copy;
+  OpStats pack;
+  OpStats p2p;
+  OpStats allreduce;
+  OpStats host_sync;
 };
 
 } // namespace acg::solver

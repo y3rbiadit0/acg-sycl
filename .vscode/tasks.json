@@ -35,6 +35,34 @@
       "problemMatcher": ["$gcc"]
     },
     {
+      "label": "run acg MPI release",
+      "type": "shell",
+      "command": "mpirun",
+      "args": [
+        "-n",
+        "2",
+        "${workspaceFolder}/build-release/acg",
+        "--matrix",
+        "${workspaceFolder}/data/matrices/tridiag_spd_16x16.mtx",
+        "--device",
+        "gpu",
+        "--residual-rtol",
+        "1e-6",
+        "--manufactured-solution",
+        "--max-iters",
+        "50000"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "ONEAPI_DEVICE_SELECTOR": "cuda:*",
+          "LD_LIBRARY_PATH": "/opt/dpcpp/llvm/build/lib:/opt/oneMath/install/lib:${env:LD_LIBRARY_PATH}"
+        }
+      },
+      "problemMatcher": ["$gcc"],
+      "dependsOn": "build acg release"
+    },
+    {
       "label": "configure acg kernel debug",
       "type": "shell",
       "command": "make",

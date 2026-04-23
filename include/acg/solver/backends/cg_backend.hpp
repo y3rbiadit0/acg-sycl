@@ -11,6 +11,7 @@ namespace acg::solver::backends {
 struct DeviceVector {
   double *data = nullptr;
   oneapi::math::sparse::dense_vector_handle_t handle = nullptr;
+  std::int64_t size = 0;
 };
 
 class SingleGpuCgBackend {

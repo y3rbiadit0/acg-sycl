@@ -8,7 +8,11 @@ namespace acg::solver {
 struct SolverResult {
   bool converged = false;
   int iterations = 0;
+  double initial_residual = 0.0;
   double final_residual = 0.0;
+  double rhs_norm = 0.0;
+  double relative_residual_to_initial = 0.0;
+  double relative_residual_to_rhs = 0.0;
   double solve_time_seconds = 0.0;   // CG iterations only
   double total_time_seconds = 0.0;   // full run_cg including setup
   double relative_solution_error = 0.0;
