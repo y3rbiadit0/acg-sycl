@@ -33,9 +33,6 @@ bool cg_residual_converged(double residual_norm, const CgThresholds &thresholds)
 
 ResidualDiagnostics make_residual_diagnostics(double rhs_norm, double initial_residual, double final_residual) {
   return ResidualDiagnostics{
-      .rhs_norm = rhs_norm,
-      .initial_residual = initial_residual,
-      .final_residual = final_residual,
       .relative_to_initial = safe_relative_ratio(final_residual, initial_residual),
       .relative_to_rhs = safe_relative_ratio(final_residual, rhs_norm),
   };

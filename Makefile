@@ -7,6 +7,9 @@ ARGS ?=
 FRESH_CONFIGURE ?= ON
 DEVICE_DEBUG ?= OFF
 SYCL_TARGET_OVERRIDE ?=
+MPI_NP ?= 0
+ACG_ENABLE_GPU_AWARE_MPI ?= ON
+ACG_ENABLE_METIS ?= OFF
 
 .PHONY: env-info configure build run \
 	configure-debug build-debug run-debug \
@@ -14,16 +17,16 @@ SYCL_TARGET_OVERRIDE ?=
 	configure-kernel-debug build-kernel-debug smoke-onemath
 
 env-info:
-	ENV=$(ENV) bash tooling/scripts/common.sh >/dev/null && ENV=$(ENV) bash -lc 'source tooling/scripts/common.sh && print_env_summary'
+	ENV=$(ENV) bash -lc 'source tooling/scripts/common.sh && print_env_summary'
 
 configure:
-	ENV=$(ENV) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) DEVICE_DEBUG=$(DEVICE_DEBUG) FRESH_CONFIGURE=$(FRESH_CONFIGURE) SYCL_TARGET_OVERRIDE=$(SYCL_TARGET_OVERRIDE) bash tooling/scripts/configure.sh
+	ENV=$(ENV) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) DEVICE_DEBUG=$(DEVICE_DEBUG) FRESH_CONFIGURE=$(FRESH_CONFIGURE) SYCL_TARGET_OVERRIDE=$(SYCL_TARGET_OVERRIDE) ACG_ENABLE_GPU_AWARE_MPI=$(ACG_ENABLE_GPU_AWARE_MPI) ACG_ENABLE_METIS=$(ACG_ENABLE_METIS) bash -lc 'source tooling/scripts/configure.sh'
 
 build:
-	ENV=$(ENV) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) bash tooling/scripts/build.sh
+	ENV=$(ENV) BUILD_TYPE=$(BUILD_TYPE) BUILD_DIR=$(BUILD_DIR) bash -lc 'source tooling/scripts/build.sh'
 
 run:
-	ENV=$(ENV) BUILD_DIR=$(BUILD_DIR) MATRIX=$(MATRIX) DEVICE=$(DEVICE) ARGS='$(ARGS)' bash tooling/scripts/run.sh
+	ENV=$(ENV) BUILD_DIR=$(BUILD_DIR) MATRIX=$(MATRIX) DEVICE=$(DEVICE) MPI_NP=$(MPI_NP) ARGS='$(ARGS)' bash -lc 'source tooling/scripts/run.sh'
 
 configure-debug:
 	$(MAKE) configure ENV=$(ENV) BUILD_TYPE=Debug BUILD_DIR=build FRESH_CONFIGURE=OFF

@@ -121,6 +121,8 @@
         "${workspaceFolder}/data/matrices/${input:matrixFile}",
         "--device",
         "gpu",
+        "--mpi-mode",
+        "${input:mpiMode}",
         "--residual-rtol",
         "1e-6",
         "--manufactured-solution",
@@ -241,6 +243,16 @@
     }
   ],
   "inputs": [
+    {
+      "id": "mpiMode",
+      "type": "pickString",
+      "description": "Select MPI communication mode",
+      "default": "host",
+      "options": [
+        "host",
+        "gpu-aware"
+      ]
+    },
     {
       "id": "mpiRanks",
       "type": "pickString",

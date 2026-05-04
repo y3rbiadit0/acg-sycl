@@ -14,28 +14,30 @@ namespace acg::solver {
 
 namespace {
 
-std::vector<double> slice_vector(
+std::vector<double> gather_vector(
     const std::vector<double> &values,
-    std::int64_t begin,
-    std::int64_t end) {
-  return std::vector<double>(
-      values.begin() + static_cast<std::ptrdiff_t>(begin),
-      values.begin() + static_cast<std::ptrdiff_t>(end));
+    const std::vector<std::int64_t> &indices) {
+  std::vector<double> gathered;
+  gathered.reserve(indices.size());
+  for (const std::int64_t index : indices) {
+    gathered.push_back(values[static_cast<std::size_t>(index)]);
+  }
+  return gathered;
 }
 
 std::vector<double> build_local_rhs(
     const acg::matrix::CsrMatrix<double> &matrix,
-    std::int64_t row_begin,
-    std::int64_t row_end,
+    const std::vector<std::int64_t> &local_global_rows,
     const std::vector<double> &x_exact_host,
     const std::vector<double> &default_b_host,
     bool manufactured_solution) {
   if (!manufactured_solution) {
-    return slice_vector(default_b_host, row_begin, row_end);
+    return gather_vector(default_b_host, local_global_rows);
   }
 
-  std::vector<double> b_local(static_cast<std::size_t>(row_end - row_begin), 0.0);
-  for (std::int64_t row = row_begin; row < row_end; ++row) {
+  std::vector<double> b_local(local_global_rows.size(), 0.0);
+  for (std::size_t local_row = 0; local_row < local_global_rows.size(); ++local_row) {
+    const std::int64_t row = local_global_rows[local_row];
     double sum = 0.0;
     for (std::int64_t offset = matrix.row_ptr[static_cast<std::size_t>(row)];
          offset < matrix.row_ptr[static_cast<std::size_t>(row + 1)];
@@ -43,7 +45,7 @@ std::vector<double> build_local_rhs(
       sum += matrix.values[static_cast<std::size_t>(offset)]
              * x_exact_host[static_cast<std::size_t>(matrix.col_idx[static_cast<std::size_t>(offset)])];
     }
-    b_local[static_cast<std::size_t>(row - row_begin)] = sum;
+    b_local[local_row] = sum;
   }
   return b_local;
 }
@@ -68,13 +70,15 @@ SolverResult run_cg(
 
   const RhsBuildResult rhs = build_rhs_inputs(static_cast<std::size_t>(matrix.rows), options);
   if (ctx.size > 1) {
+    const acg::matrix::PartitionOptions partition_options = acg::matrix::partition_options_from_environment();
     const acg::matrix::DistributedCsrMatrixPartition partition =
-        acg::matrix::build_row_block_partition(matrix, ctx.rank, ctx.size);
-    const std::vector<double> x_exact_local = slice_vector(rhs.x_exact_host, partition.local_row_begin, partition.local_row_end);
+        acg::matrix::build_distributed_partition(matrix, ctx.rank, ctx.size, partition_options);
+    const std::vector<double> x_exact_local = options.manufactured_solution
+                                                ? gather_vector(rhs.x_exact_host, partition.local_global_rows)
+                                                : std::vector<double>{};
     const std::vector<double> b_local = build_local_rhs(
         matrix,
-        partition.local_row_begin,
-        partition.local_row_end,
+        partition.local_global_rows,
         rhs.x_exact_host,
         rhs.b_host,
         options.manufactured_solution);

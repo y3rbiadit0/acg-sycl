@@ -21,7 +21,7 @@ struct OpStats {
   }
 };
 
-struct PerfBreakdown {
+struct NativePerfBreakdown {
   OpStats spmv;
   OpStats dot;
   OpStats nrm2;
@@ -31,6 +31,21 @@ struct PerfBreakdown {
   OpStats p2p;
   OpStats allreduce;
   OpStats host_sync;
+};
+
+struct CudaCompatiblePerfBreakdown {
+  OpStats gemv;
+  OpStats dot;
+  OpStats nrm2;
+  OpStats axpy;
+  OpStats copy;
+  OpStats allreduce;
+  OpStats haloexchange;
+};
+
+struct PerfBreakdown {
+  NativePerfBreakdown native;
+  CudaCompatiblePerfBreakdown cuda;
 };
 
 } // namespace acg::solver

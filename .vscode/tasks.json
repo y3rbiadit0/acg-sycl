@@ -46,6 +46,8 @@
         "${workspaceFolder}/data/matrices/tridiag_spd_16x16.mtx",
         "--device",
         "gpu",
+        "--mpi-mode",
+        "${input:mpiMode}",
         "--residual-rtol",
         "1e-6",
         "--manufactured-solution",
@@ -77,6 +79,18 @@
       "args": ["build-kernel-debug", "ENV=local"],
       "options": { "cwd": "${workspaceFolder}" },
       "problemMatcher": ["$gcc"]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "mpiMode",
+      "type": "pickString",
+      "description": "Select MPI communication mode",
+      "default": "host",
+      "options": [
+        "host",
+        "gpu-aware"
+      ]
     }
   ]
 }

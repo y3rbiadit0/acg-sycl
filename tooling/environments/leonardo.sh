@@ -23,7 +23,8 @@ export CXX="$DPCPP_CLANGXX"
 export ACG_ONEMATH_ROOT="$HOME/opt/oneMath"
 
 # Extra dependencies
-export METIS_DIR="$HOME/thesis/local_gcc"
+export METIS_HOME="${METIS_HOME:-$HOME/thesis/local_gcc}"
+export METIS_DIR="$METIS_HOME"
 export METIS_LIB_DIR="${METIS_DIR}/lib64"
 export METIS_LIBRARIES="${METIS_LIB_DIR}/libmetis.a;${METIS_LIB_DIR}/libGKlib.a"
 
@@ -58,3 +59,11 @@ export OpenMP_CXX_FLAGS="-fopenmp"
 export ACG_SYCL_DEBUG_ITERS=5
 export ACG_SYCL_MAX_ITERATIONS=20
 export ACG_SYCL_WARMUP=0
+
+
+# hwloc - export HWLOC_ROOT="$HOME/local/hwloc"
+export HWLOC_ROOT=$HOME/local/hwloc
+export PKG_CONFIG_PATH=$HWLOC_ROOT/lib/pkgconfig:$PKG_CONFIG_PATH
+export LD_LIBRARY_PATH=$HWLOC_ROOT/lib:$LD_LIBRARY_PATH
+export PATH=$HWLOC_ROOT/bin:$PATH
+export LD_LIBRARY_PATH=$HOME/local/hwloc/lib:$LD_LIBRARY_PATH

@@ -22,7 +22,6 @@ public:
 
   std::int64_t size() const noexcept override;
   std::int64_t nnz() const noexcept override;
-  std::int64_t columns() const noexcept;
 
   DeviceVector create_vector() override;
   DeviceVector create_vector(std::int64_t size);
@@ -34,6 +33,10 @@ public:
   void scal(double alpha, DeviceVector &x) override;
   void axpy(double alpha, const DeviceVector &x, DeviceVector &y) override;
   double dot(const DeviceVector &x, const DeviceVector &y) override;
+  double *create_device_scalar(double initial_value = 0.0);
+  void destroy_device_scalar(double *scalar) noexcept;
+  void dot_to_device(const DeviceVector &x, const DeviceVector &y, double *result);
+  double read_device_scalar(const double *scalar);
   void spmv(const DeviceVector &x, DeviceVector &y) override;
 
   std::int64_t estimated_spmv_bytes() const noexcept override;

@@ -9,12 +9,7 @@ namespace acg::solver {
 namespace {
 
 std::vector<double> generate_exact_solution(std::size_t size, const SolverOptions &options) {
-  std::vector<double> x_exact(size, 1.0);
-
-  if (!options.manufactured_solution) {
-    return x_exact;
-  }
-
+  std::vector<double> x_exact(size);
   std::mt19937 generator(options.seed);
   std::uniform_real_distribution<double> distribution(-1.0, 1.0);
   double norm_squared = 0.0;
@@ -40,10 +35,12 @@ std::vector<double> generate_exact_solution(std::size_t size, const SolverOption
 
 RhsBuildResult build_rhs_inputs(std::size_t size, const SolverOptions &options) {
   RhsBuildResult result;
-  result.x_exact_host = generate_exact_solution(size, options);
   result.b_host.assign(size, 0.0);
 
-  if (!options.manufactured_solution) {
+  if (options.manufactured_solution) {
+    result.x_exact_host = generate_exact_solution(size, options);
+  }
+  else {
     std::fill(result.b_host.begin(), result.b_host.end(), 1.0);
   }
 

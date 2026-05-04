@@ -2,6 +2,7 @@
 #define ACG_MATRIX_DISTRIBUTED_CSR_MATRIX_HPP
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "acg/matrix/csr_matrix.hpp"
@@ -27,6 +28,9 @@ struct DistributedCsrMatrixPartition {
   int size = 1;
   std::int64_t local_row_begin = 0;
   std::int64_t local_row_end = 0;
+  std::string method = "row-block";
+  std::int64_t objective = -1;
+  std::vector<std::int64_t> local_global_rows;
   CsrMatrix<double> local_matrix;
   CsrMatrix<double> interior_matrix;
   CsrMatrix<double> halo_matrix;
@@ -34,10 +38,32 @@ struct DistributedCsrMatrixPartition {
   std::vector<HaloImport> imports;
   std::vector<HaloExport> exports;
 
-  [[nodiscard]] std::int64_t local_rows() const noexcept { return local_row_end - local_row_begin; }
+  [[nodiscard]] std::int64_t local_rows() const noexcept { return static_cast<std::int64_t>(local_global_rows.size()); }
 };
 
+enum class PartitionMethod {
+  RowBlock,
+  Metis,
+};
+
+struct PartitionOptions {
+  PartitionMethod method = PartitionMethod::RowBlock;
+};
+
+PartitionOptions partition_options_from_environment();
+
+DistributedCsrMatrixPartition build_distributed_partition(
+    const CsrMatrix<double> &matrix,
+    int rank,
+    int size,
+    const PartitionOptions &options);
+
 DistributedCsrMatrixPartition build_row_block_partition(
+    const CsrMatrix<double> &matrix,
+    int rank,
+    int size);
+
+DistributedCsrMatrixPartition build_metis_partition(
     const CsrMatrix<double> &matrix,
     int rank,
     int size);

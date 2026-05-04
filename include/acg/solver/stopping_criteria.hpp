@@ -18,9 +18,6 @@ struct CgIterationMetrics {
 };
 
 struct ResidualDiagnostics {
-  double rhs_norm = 0.0;
-  double initial_residual = 0.0;
-  double final_residual = 0.0;
   double relative_to_initial = 0.0;
   double relative_to_rhs = 0.0;
 };

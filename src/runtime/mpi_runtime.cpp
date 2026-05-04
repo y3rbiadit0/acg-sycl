@@ -4,6 +4,7 @@
 #include <mpi.h>
 #endif
 
+#include <exception>
 #include <stdexcept>
 
 namespace acg::runtime {
@@ -43,6 +44,9 @@ ScopedMpiSession::ScopedMpiSession(int &argc, char **&argv) {
 
 ScopedMpiSession::~ScopedMpiSession() {
 #ifdef ACG_HAVE_MPI
+  if (std::uncaught_exceptions() > 0) {
+    return;
+  }
   int finalized = 0;
   MPI_Finalized(&finalized);
   if (owns_mpi_ && finalized == 0) {

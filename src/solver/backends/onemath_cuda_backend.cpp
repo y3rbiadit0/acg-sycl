@@ -73,8 +73,6 @@ std::int64_t OnemathCudaBackend::size() const noexcept { return rows_; }
 
 std::int64_t OnemathCudaBackend::nnz() const noexcept { return nnz_; }
 
-std::int64_t OnemathCudaBackend::columns() const noexcept { return cols_; }
-
 DeviceVector OnemathCudaBackend::create_vector() { return create_vector(rows_); }
 
 DeviceVector OnemathCudaBackend::create_vector(std::int64_t size) {
@@ -114,6 +112,29 @@ double OnemathCudaBackend::dot(const DeviceVector &x, const DeviceVector &y) {
   return *dot_result_;
 }
 
+double *OnemathCudaBackend::create_device_scalar(double initial_value) {
+  double *scalar = make_device_array<double>(1);
+  queue_->memcpy(scalar, &initial_value, sizeof(double)).wait();
+  return scalar;
+}
+
+void OnemathCudaBackend::destroy_device_scalar(double *scalar) noexcept {
+  if (scalar != nullptr) {
+    sycl::free(scalar, *queue_);
+  }
+}
+
+void OnemathCudaBackend::dot_to_device(const DeviceVector &x, const DeviceVector &y, double *result) {
+  expect_equal_size(x.size, y.size, "dot");
+  oneapi::math::blas::column_major::dot(*queue_, x.size, x.data, 1, y.data, 1, result).wait();
+}
+
+double OnemathCudaBackend::read_device_scalar(const double *scalar) {
+  double value = 0.0;
+  queue_->memcpy(&value, scalar, sizeof(double)).wait();
+  return value;
+}
+
 void OnemathCudaBackend::spmv(const DeviceVector &x, DeviceVector &y) {
   expect_equal_size(cols_, x.size, "spmv input");
   expect_equal_size(rows_, y.size, "spmv output");
@@ -142,7 +163,13 @@ T *OnemathCudaBackend::make_device_array(std::size_t count) {
 
 template <typename T>
 T *OnemathCudaBackend::make_shared_scalar(T initial_value) {
-  T *ptr = sycl::malloc_shared<T>(1, *queue_);
+  // malloc_host (pinned host memory) instead of malloc_shared (CUDA UVM):
+  // the GPU writes 8 bytes via DMA; CPU reads directly after .wait() with no
+  // UVM page-fault serialization. With malloc_shared, 4 concurrent ranks
+  // trigger simultaneous GPU→CPU page migrations that serialize through the
+  // CUDA driver's global UVM fault handler, each costing ~5ms and showing up
+  // as allreduce latency (the faster ranks wait at MPI_Allreduce for the rest).
+  T *ptr = sycl::malloc_host<T>(1, *queue_);
   if (ptr == nullptr) {
     throw std::runtime_error("failed to allocate shared scalar");
   }

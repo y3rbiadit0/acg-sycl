@@ -10,11 +10,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ACG_ENABLE_SYCL "Build with SYCL support" ON)
 option(ACG_ENABLE_MPI "Build with MPI support" ON)
+option(ACG_ENABLE_GPU_AWARE_MPI "Enable direct device-buffer MPI communication" OFF)
 option(ACG_ENABLE_DEVICE_DEBUG "Build SYCL kernels with debug-friendly flags" OFF)
+option(ACG_ENABLE_METIS "Enable METIS partitioning" OFF)
 set(ACG_SYCL_TARGET "" CACHE STRING "SYCL device target")
 set(ACG_EXTRA_COMPILE_FLAGS "" CACHE STRING "Extra compiler flags for the project")
 set(ACG_EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags for the project")
 set(oneMath_ROOT "/opt/oneMath/install" CACHE PATH "oneMath install root")
+set(METIS_HOME "" CACHE PATH "METIS installation prefix")
+set(METIS_LIBRARIES "" CACHE STRING "METIS libraries")
 
 if(ACG_EXTRA_COMPILE_FLAGS)
   separate_arguments(ACG_EXTRA_COMPILE_FLAGS_LIST NATIVE_COMMAND "${ACG_EXTRA_COMPILE_FLAGS}")
@@ -28,6 +32,7 @@ add_library(acg_core STATIC
   src/cli/parse_args.cpp
   src/matrix/matrix_market_reader.cpp
   src/matrix/distributed_partition.cpp
+  src/reporting/solver_report.cpp
   src/runtime/queue_factory.cpp
   src/runtime/mpi_runtime.cpp
   src/solver/algorithms/cg_multi_gpu_mpi.cpp
@@ -44,6 +49,30 @@ if(ACG_ENABLE_MPI)
   find_package(MPI REQUIRED COMPONENTS CXX)
   target_link_libraries(acg_core PUBLIC MPI::MPI_CXX)
   target_compile_definitions(acg_core PUBLIC ACG_HAVE_MPI=1)
+  if(ACG_ENABLE_GPU_AWARE_MPI)
+    target_compile_definitions(acg_core PUBLIC ACG_HAVE_GPU_AWARE_MPI=1)
+  endif()
+endif()
+
+if(ACG_ENABLE_METIS)
+  if(NOT METIS_LIBRARIES AND DEFINED ENV{METIS_LIBRARIES})
+    set(METIS_LIBRARIES "$ENV{METIS_LIBRARIES}")
+  endif()
+  find_path(METIS_INCLUDE_DIR metis.h
+    HINTS ${METIS_HOME} $ENV{METIS_HOME} $ENV{METIS_DIR}
+    PATH_SUFFIXES include)
+  if(NOT METIS_LIBRARIES)
+    find_library(METIS_LIBRARY metis
+      HINTS ${METIS_HOME} $ENV{METIS_HOME} $ENV{METIS_DIR}
+      PATH_SUFFIXES lib lib64)
+    set(METIS_LIBRARIES ${METIS_LIBRARY})
+  endif()
+  if(NOT METIS_INCLUDE_DIR OR NOT METIS_LIBRARIES)
+    message(FATAL_ERROR "ACG_ENABLE_METIS=ON but METIS was not found. Set METIS_HOME, e.g. -DMETIS_HOME=$ENV{METIS_HOME}")
+  endif()
+  target_include_directories(acg_core PUBLIC ${METIS_INCLUDE_DIR})
+  target_link_libraries(acg_core PUBLIC ${METIS_LIBRARIES})
+  target_compile_definitions(acg_core PUBLIC ACG_HAVE_METIS=1)
 endif()
 
 if(ACG_ENABLE_SYCL)

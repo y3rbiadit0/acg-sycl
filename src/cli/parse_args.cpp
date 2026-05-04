@@ -21,6 +21,16 @@ acg::runtime::DeviceKind parse_device_kind(const std::string &value) {
   throw std::runtime_error("invalid value for --device: " + value);
 }
 
+acg::solver::MpiMode parse_mpi_mode(const std::string &value) {
+  if (value == "host") {
+    return acg::solver::MpiMode::Host;
+  }
+  if (value == "gpu-aware") {
+    return acg::solver::MpiMode::GpuAware;
+  }
+  throw std::runtime_error("invalid value for --mpi-mode: " + value);
+}
+
 std::string require_value(int argc, char **argv, int &index, const char *option) {
   if (index + 1 >= argc) {
     throw std::runtime_error(std::string("missing value for ") + option);
@@ -55,6 +65,11 @@ AppConfig parse_args(int argc, char **argv) {
 
     if (arg == "--profile") {
       config.enable_profiling = true;
+      continue;
+    }
+
+    if (arg == "--mpi-mode") {
+      config.solver.mpi_mode = parse_mpi_mode(require_value(argc, argv, i, "--mpi-mode"));
       continue;
     }
 
@@ -123,6 +138,7 @@ void print_usage(std::ostream &out, const char *program_name) {
       << "Options:\n"
       << "  --matrix <path>             Matrix Market file to load\n"
       << "  --device <default|cpu|gpu>  SYCL device selector\n"
+      << "  --mpi-mode <host|gpu-aware> MPI halo communication mode\n"
       << "  --profile                   Enable SYCL queue profiling\n"
       << "  --diff-atol <value>         Absolute tolerance for solution update norm\n"
       << "  --diff-rtol <value>         Relative tolerance for solution update norm\n"
