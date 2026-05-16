@@ -18,5 +18,7 @@ __pycache__/
 *.bak
 *.tmp
 *.zip
-
 *.mtx
+
+temp_files/
+
