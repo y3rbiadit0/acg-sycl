@@ -16,6 +16,7 @@ set -euo pipefail
 
 project_root=${ACG_PROJECT_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}
 mkdir -p "$project_root/results"
+extra_args=${ACG_EXTRA_ARGS:-}
 
 source "$project_root/tooling/environments/leonardo.sh"
 
@@ -23,6 +24,9 @@ export OMPI_MCA_btl=^openib
 # Inter-node run: sm/cuda_ipc for intra-node traffic, rc for InfiniBand.
 export UCX_TLS=sm,cuda_copy,cuda_ipc,rc,self
 export ACG_PARTITIONER=metis
+export ACG_LOG_NATIVE_PERF=1
+export ACG_SOLVER_DIAGNOSTICS=1
+export ACG_SOLVER_DIAG_ITERS=${ACG_SOLVER_DIAG_ITERS:-5}
 
 mpirun -np "$SLURM_NTASKS" \
   --map-by ppr:4:node --bind-to none \
@@ -37,4 +41,5 @@ mpirun -np "$SLURM_NTASKS" \
     --residual-atol 0 \
     --residual-rtol 1e-6 \
     --max-iters 100000 \
-    --manufactured-solution
+    --manufactured-solution \
+    $extra_args

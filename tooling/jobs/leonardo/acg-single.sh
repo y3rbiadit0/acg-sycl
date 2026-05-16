@@ -16,14 +16,21 @@ set -euo pipefail
 
 project_root=${ACG_PROJECT_ROOT:-${SLURM_SUBMIT_DIR:-$(pwd)}}
 mkdir -p "$project_root/results"
+extra_args=${ACG_EXTRA_ARGS:-}
 
 source "$project_root/tooling/environments/leonardo.sh"
 
 export OMPI_MCA_btl=^openib
+export ACG_LOG_NATIVE_PERF=1
+export ACG_SOLVER_DIAGNOSTICS=1
+export ACG_SOLVER_DIAG_ITERS=${ACG_SOLVER_DIAG_ITERS:-5}
 
 "$project_root/build-release/acg" \
   --matrix "$project_root/data/matrices/Bump_2911/Bump_2911.mtx" \
   --device gpu \
+  --seed 101 \
+  --residual-atol 0 \
   --residual-rtol 1e-6 \
-  --max-iters 32000 \
-  --manufactured-solution
+  --max-iters 100000 \
+  --manufactured-solution \
+  $extra_args
