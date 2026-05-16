@@ -30,6 +30,7 @@ export NVSHMEM_IB_ENABLE_IBGDA=0
 export NVSHMEM_DISABLE_NCCL=1
 
 export OMPI_MCA_coll_hcoll_enable=0
+export OMPI_MCA_coll_ucc_enable=0
 export OMPI_MCA_btl=^openib
 
 BINARY=${ACG_CUDA_BINARY:-$HOME/Projects/thesis/aCG/build/acg-cuda}
@@ -37,6 +38,7 @@ MTXFILE=${ACG_MATRIX:-$HOME/Projects/thesis/dataset/Bump_2911/Bump_2911.mtx}
 NTRIALS=${ACG_NTRIALS:-3}
 MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
 WARMUP=${ACG_WARMUP:-10}
+OUTPUT_COMM_MATRIX=${ACG_OUTPUT_COMM_MATRIX:-0}
 
 [ -x "$BINARY" ] || { echo "no executable: $BINARY" >&2; exit 1; }
 [ -e "$MTXFILE" ] || { echo "no such file or directory: $MTXFILE" >&2; exit 1; }
@@ -48,6 +50,11 @@ echo "matrix: $MTXFILE"
 echo "trials: $NTRIALS"
 echo "max iterations: $MAX_ITERATIONS"
 nvidia-smi || true
+
+output_comm_matrix_args=()
+if [[ "$OUTPUT_COMM_MATRIX" != "0" && -n "$OUTPUT_COMM_MATRIX" ]]; then
+    output_comm_matrix_args=(--output-comm-matrix)
+fi
 
 solve() {
     local ntrials=$1
@@ -69,7 +76,7 @@ solve() {
             -N 1 \
             --ntasks-per-node=1 \
             "$BINARY" "$MTXFILE" \
-            --verbose --verbose --verbose --output-comm-matrix \
+            --verbose --verbose --verbose "${output_comm_matrix_args[@]}" \
             --manufactured-solution \
             --seed 101 \
             --residual-atol 0 \

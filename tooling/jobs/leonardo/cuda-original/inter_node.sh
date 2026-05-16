@@ -30,18 +30,20 @@ export NVSHMEM_IB_ENABLE_IBGDA=0
 export NVSHMEM_DISABLE_NCCL=1
 
 export OMPI_MCA_coll_hcoll_enable=0
+export OMPI_MCA_coll_ucc_enable=0
 export OMPI_MCA_btl=^openib
 export OMPI_MCA_pml=ucx
 export OMPI_MCA_mpi_cuda_support=1
-export UCX_TLS=all
-export UCX_RNDV_SCHEME=put_zcopy
-export UCX_RNDV_THRESH=16384
+export UCX_TLS=${ACG_CUDA_UCX_TLS:-sm,cuda_copy,cuda_ipc,rc,self}
+export UCX_RNDV_SCHEME=${ACG_CUDA_UCX_RNDV_SCHEME:-get_zcopy}
+export UCX_RNDV_THRESH=${ACG_CUDA_UCX_RNDV_THRESH:-16384}
 
 BINARY=${ACG_CUDA_BINARY:-$HOME/Projects/thesis/aCG/build/acg-cuda}
 MTXFILE=${ACG_MATRIX:-$HOME/Projects/thesis/dataset/Bump_2911/Bump_2911.mtx}
 NTRIALS=${ACG_NTRIALS:-3}
 MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
 WARMUP=${ACG_WARMUP:-10}
+OUTPUT_COMM_MATRIX=${ACG_OUTPUT_COMM_MATRIX:-0}
 
 [ -x "$BINARY" ] || { echo "no executable: $BINARY" >&2; exit 1; }
 [ -e "$MTXFILE" ] || { echo "no such file or directory: $MTXFILE" >&2; exit 1; }
@@ -52,7 +54,15 @@ echo "binary: $BINARY"
 echo "matrix: $MTXFILE"
 echo "trials: $NTRIALS"
 echo "max iterations: $MAX_ITERATIONS"
+echo "UCX_TLS: $UCX_TLS"
+echo "UCX_RNDV_SCHEME: $UCX_RNDV_SCHEME"
+echo "UCX_RNDV_THRESH: $UCX_RNDV_THRESH"
 nvidia-smi || true
+
+output_comm_matrix_args=()
+if [[ "$OUTPUT_COMM_MATRIX" != "0" && -n "$OUTPUT_COMM_MATRIX" ]]; then
+    output_comm_matrix_args=(--output-comm-matrix)
+fi
 
 solve() {
     local ntrials=$1
@@ -72,11 +82,11 @@ solve() {
         /usr/bin/time -p --verbose \
             mpirun --verbose \
             -np "$SLURM_NTASKS" \
-            -map-by node:PE="${SLURM_CPUS_PER_TASK}" \
-            -rank-by core \
-            -bind-to none \
+            --map-by ppr:4:node:PE="${SLURM_CPUS_PER_TASK}" \
+            --rank-by core \
+            --bind-to core \
             "$BINARY" "$MTXFILE" \
-            --verbose --verbose --verbose --output-comm-matrix \
+            --verbose --verbose --verbose "${output_comm_matrix_args[@]}" \
             --manufactured-solution \
             --seed 101 \
             --residual-atol 0 \
