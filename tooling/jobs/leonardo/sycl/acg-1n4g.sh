@@ -30,8 +30,8 @@ export OMPI_MCA_btl=^openib
 export OMPI_MCA_mpi_cuda_support=1
 export UCX_TLS=${ACG_SYCL_UCX_TLS:-sm,cuda_copy,cuda_ipc,self}
 
-BINARY=${ACG_SYCL_BINARY:-$HOME/Projects/thesis/aCG-SYCL/build-release/acg}
-MTXFILE=${ACG_MATRIX:-$HOME/Projects/thesis/dataset/Bump_2911/Bump_2911.mtx}
+BINARY=${ACG_SYCL_BINARY:-$project_root/build-release/acg}
+MTXFILE=${ACG_MATRIX:-$project_root/dataset/Bump_2911/Bump_2911.mtx}
 NTRIALS=${ACG_NTRIALS:-3}
 MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
 EXTRA_ARGS=${ACG_EXTRA_ARGS:-}

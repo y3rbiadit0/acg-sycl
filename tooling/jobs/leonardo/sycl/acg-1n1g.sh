@@ -28,8 +28,8 @@ export OMPI_MCA_coll_hcoll_enable=0
 export OMPI_MCA_coll_ucc_enable=0
 export OMPI_MCA_btl=^openib
 
-BINARY=${ACG_SYCL_BINARY:-$HOME/Projects/thesis/aCG-SYCL/build-release/acg}
-MTXFILE=${ACG_MATRIX:-$HOME/Projects/thesis/dataset/Bump_2911/Bump_2911.mtx}
+BINARY=${ACG_SYCL_BINARY:-$project_root/build-release/acg}
+MTXFILE=${ACG_MATRIX:-$project_root/dataset/Bump_2911/Bump_2911.mtx}
 NTRIALS=${ACG_NTRIALS:-3}
 MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
 EXTRA_ARGS=${ACG_EXTRA_ARGS:-}
