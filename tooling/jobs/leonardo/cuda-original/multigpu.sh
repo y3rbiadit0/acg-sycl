@@ -75,11 +75,9 @@ solve() {
         echo "stderr: ${errfile}.tmp"
 
         /usr/bin/time -p --verbose \
-            mpirun --verbose \
-            -np "$SLURM_NTASKS" \
-            --map-by ppr:4:node:PE="${SLURM_CPUS_PER_TASK}" \
-            --rank-by core \
-            --bind-to core \
+            srun --cpu-freq=high \
+            -N 1 \
+            --ntasks-per-node=4 \
             "$BINARY" "$MTXFILE" \
             --verbose --verbose --verbose "${output_comm_matrix_args[@]}" \
             --manufactured-solution \
