@@ -17,9 +17,9 @@ set -euo pipefail
 
 mkdir -p ./logs
 
+export LC_ALL=C
 source "$HOME/Projects/thesis/thesis_env_cuda.sh"
 
-export LC_ALL=C
 export OMP_DISPLAY_ENV=false
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
 export SLURM_CPU_BIND=none
@@ -35,9 +35,19 @@ export OMPI_MCA_btl=^openib
 BINARY=${ACG_CUDA_BINARY:-$HOME/Projects/thesis/aCG/build/acg-cuda}
 MTXFILE=${ACG_MATRIX:-$HOME/Projects/thesis/dataset/Bump_2911/Bump_2911.mtx}
 NTRIALS=${ACG_NTRIALS:-3}
+MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
+WARMUP=${ACG_WARMUP:-10}
 
 [ -x "$BINARY" ] || { echo "no executable: $BINARY" >&2; exit 1; }
 [ -e "$MTXFILE" ] || { echo "no such file or directory: $MTXFILE" >&2; exit 1; }
+
+echo "job: $SLURM_JOB_NAME/$SLURM_JOB_ID"
+echo "node: $(hostname)"
+echo "binary: $BINARY"
+echo "matrix: $MTXFILE"
+echo "trials: $NTRIALS"
+echo "max iterations: $MAX_ITERATIONS"
+nvidia-smi || true
 
 solve() {
     local ntrials=$1
@@ -55,13 +65,17 @@ solve() {
         echo "stderr: ${errfile}.tmp"
 
         /usr/bin/time -p --verbose \
+            srun --cpu-freq=high \
+            -N 1 \
+            --ntasks-per-node=1 \
             "$BINARY" "$MTXFILE" \
-            --verbose --verbose --verbose -q --output-comm-matrix \
+            --verbose --verbose --verbose --output-comm-matrix \
             --manufactured-solution \
             --seed 101 \
             --residual-atol 0 \
             --residual-rtol 1e-6 \
-            --max-iterations 100000 \
+            --max-iterations "$MAX_ITERATIONS" \
+            --warmup "$WARMUP" \
             "$@" \
             >"${outfile}.tmp" 2>"${errfile}.tmp" \
         && mv --verbose "${outfile}.tmp" "$outfile" \
