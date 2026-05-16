@@ -39,6 +39,11 @@ NTRIALS=${ACG_NTRIALS:-3}
 MAX_ITERATIONS=${ACG_MAX_ITERATIONS:-100000}
 EXTRA_ARGS=${ACG_EXTRA_ARGS:-}
 
+# ACG Logs settings 
+export ACG_LOG_NATIVE_PERF=1
+export ACG_SOLVER_DIAGNOSTICS=1
+export ACG_SOLVER_DIAG_ITERS=${ACG_SOLVER_DIAG_ITERS:-5}
+
 [ -x "$BINARY" ] || { echo "no executable: $BINARY" >&2; exit 1; }
 [ -e "$MTXFILE" ] || { echo "no such file or directory: $MTXFILE" >&2; exit 1; }
 
