@@ -1,4 +1,4 @@
-# SYCL Results v0.0.1 -- aCG Results Summary
+# CUDA/SYCL Comparison Results -- aCG Results Summary
 
 Input roots: `SYCL=/home/franco-merenda/Software-Projects/aCG-SYCL/temp_files/sycl_results`
 Matrices: `Bump_2911`
@@ -68,3 +68,12 @@ Matrices: `Bump_2911`
 | SYCL | 1n4g | mpi | 4 | 1.097 | 2.136 | 2.118 | 2.118 | 2.152 |
 | SYCL | 2n4g | mpi | 8 | 1.211 | 3.198 | 3.134 | 3.134 | 3.227 |
 | SYCL | 4n4g | mpi | 16 | 1.516 | 4.748 | 4.620 | 4.620 | 4.809 |
+
+## CUDA Reference Comparison
+
+| Scale | SYCL comm | Ranks | SYCL solver s | SYCL iters | SYCL ms/iter | CUDA MPI s | CUDA MPI iters | CUDA MPI ms/iter | CUDA best s | Solver slowdown vs MPI | Solver slowdown vs best | Iter ratio vs MPI | ms/iter ratio vs MPI |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 1n1g | none | 1 | 64.288 | 31401 | 2.047 | 38.981 | 25634 | 1.521 | 38.981 | 1.649 | 1.649 | 1.225 | 1.346 |
+| 1n4g | mpi | 4 | 22.451 | 32101 | 0.699 | 12.588 | 25765 | 0.489 | 12.588 | 1.784 | 1.784 | 1.246 | 1.432 |
+| 2n4g | mpi | 8 | 15.427 | 32267 | 0.478 | 8.436 | 25683 | 0.328 | 7.846 | 1.829 | 1.966 | 1.256 | 1.456 |
+| 4n4g | mpi | 16 | 11.278 | 31897 | 0.354 | 7.803 | 25594 | 0.305 | 6.077 | 1.445 | 1.856 | 1.246 | 1.160 |
