@@ -4,9 +4,10 @@ from pathlib import Path
 
 from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
 from tooling.data_analysis.enums import CommunicationBackend
-from tooling.data_analysis.models import BenchmarkRun, BenchmarkSummary, DatasetRoot
+from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
 from tooling.data_analysis.parsers.base import BaseParser
 from tooling.data_analysis.parsers.cuda import CudaLogParser
+from tooling.data_analysis.summaries import BenchmarkSummary
 
 
 class CudaResultsAnalyzer(BaseResultsAnalyzer):
@@ -23,6 +24,12 @@ class CudaResultsAnalyzer(BaseResultsAnalyzer):
         if not any(summary.comm == CommunicationBackend.NVSHMEM for summary in summaries):
             return []
         return [
-            "NVSHMEM/device-side CUDA logs report `allreduce` and `haloexchange` counters as zero; communication is folded into `other` in the solver breakdown. Treat NVSHMEM solver time as comparable, but not its per-operation communication timing.",
-            "For SYCL comparison, use the same matrix, seed, residual tolerances, maximum iterations, rank layout, and at least three repeats. Compare MPI-to-MPI first; compare against NCCL/NVSHMEM only as CUDA-specific upper baselines unless SYCL has equivalent communication backends.",
+            "NVSHMEM/device-side CUDA logs report `allreduce` and `haloexchange` "
+            "counters as zero; communication is folded into `other` in the solver "
+            "breakdown. Treat NVSHMEM solver time as comparable, but not its "
+            "per-operation communication timing.",
+            "For SYCL comparison, use the same matrix, seed, residual tolerances, "
+            "maximum iterations, rank layout, and at least three repeats. Compare "
+            "MPI-to-MPI first; compare against NCCL/NVSHMEM only as CUDA-specific "
+            "upper baselines unless SYCL has equivalent communication backends.",
         ]

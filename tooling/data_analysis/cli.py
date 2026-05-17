@@ -6,6 +6,7 @@ from pathlib import Path
 from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
 from tooling.data_analysis.analyzers.cuda import CudaResultsAnalyzer
 from tooling.data_analysis.analyzers.sycl import SyclResultsAnalyzer
+from tooling.data_analysis.comparison import parse_reference_report
 from tooling.data_analysis.enums import Backend
 from tooling.data_analysis.models import DatasetRoot
 
@@ -55,6 +56,11 @@ def create_parser() -> argparse.ArgumentParser:
         default=Path("reports/acg_results_summary.md"),
         help="Markdown report path",
     )
+    parser.add_argument(
+        "--reference-report",
+        type=Path,
+        help="existing Markdown summary to compare against, e.g. reports/cuda_results_summary.md",
+    )
     return parser
 
 
@@ -70,7 +76,10 @@ def main() -> int:
         raise SystemExit("no stderr logs found below the requested dataset roots")
 
     summaries = analyzer.summarize(runs)
-    report = analyzer.render_report(summaries, runs, input_roots)
+    reference_summaries = (
+        parse_reference_report(args.reference_report) if args.reference_report else []
+    )
+    report = analyzer.render_report(summaries, runs, input_roots, reference_summaries)
     output = args.output.expanduser().resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(report)
