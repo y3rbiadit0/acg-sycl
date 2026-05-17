@@ -425,6 +425,7 @@ class ResultsReportRenderer:
             (item["scale"], item["comm"], item["ranks"]): item for item in reference_summaries
         }
         best_by_scale: dict[str, dict[str, object]] = {}
+        reference_datasets = {str(item.get("dataset")) for item in reference_summaries}
         for item in reference_summaries:
             solver = item.get("solver")
             if solver is None:
@@ -435,6 +436,8 @@ class ResultsReportRenderer:
 
         rows = []
         for summary in summaries:
+            if summary.dataset in reference_datasets:
+                continue
             solver = summary.runtime.solver_s.median
             if solver is None:
                 continue

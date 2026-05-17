@@ -6,6 +6,7 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 project_root=$(cd -- "$script_dir/../.." && pwd)
 
 cd "$project_root"
+export PYTHONPATH="$project_root/tooling/data_analysis/src${PYTHONPATH:+:$PYTHONPATH}"
 uv run --project "$project_root/tooling/data_analysis" python -m tooling.data_analysis.analyze_results "$@"
 
 # Usage:
