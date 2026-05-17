@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
 from tooling.data_analysis.analyzers.cuda import CudaResultsAnalyzer
+from tooling.data_analysis.analyzers.sycl import SyclResultsAnalyzer
 from tooling.data_analysis.enums import Backend
 from tooling.data_analysis.models import DatasetRoot
 
@@ -27,6 +28,8 @@ def parse_dataset(value: str) -> DatasetRoot:
 def create_analyzer(backend: str) -> BaseResultsAnalyzer:
     if Backend(backend) == Backend.CUDA:
         return CudaResultsAnalyzer()
+    if Backend(backend) == Backend.SYCL:
+        return SyclResultsAnalyzer()
     raise ValueError(f"unsupported backend: {backend}")
 
 
