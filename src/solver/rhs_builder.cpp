@@ -1,7 +1,8 @@
 #include "acg/solver/rhs_builder.hpp"
 
+#include <algorithm>
 #include <cmath>
-#include <random>
+#include <cstdlib>
 #include <stdexcept>
 
 namespace acg::solver {
@@ -10,12 +11,11 @@ namespace {
 
 std::vector<double> generate_exact_solution(std::size_t size, const SolverOptions &options) {
   std::vector<double> x_exact(size);
-  std::mt19937 generator(options.seed);
-  std::uniform_real_distribution<double> distribution(-1.0, 1.0);
   double norm_squared = 0.0;
 
+  std::srand(options.seed != 0 ? options.seed : 1);
   for (double &value : x_exact) {
-    value = distribution(generator);
+    value = 2.0 * (static_cast<double>(std::rand()) / static_cast<double>(RAND_MAX)) - 1.0;
     norm_squared += value * value;
   }
 
