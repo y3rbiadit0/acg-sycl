@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from tooling.data_analysis.stats import SampleStats
+from tooling.data_analysis.models.stats import SampleStats
 
 
 class SampleStatsTests(unittest.TestCase):

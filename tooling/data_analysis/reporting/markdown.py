@@ -5,7 +5,7 @@ from pathlib import Path
 
 from tooling.data_analysis.enums import CommunicationBackend
 from tooling.data_analysis.models import BenchmarkRun
-from tooling.data_analysis.summaries import BenchmarkSummary
+from tooling.data_analysis.models.summaries import BenchmarkSummary
 from tooling.data_analysis.utils import fmt, markdown_table
 
 

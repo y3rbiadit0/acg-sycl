@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tooling.data_analysis.comparison import parse_reference_report
+from tooling.data_analysis.parsing import parse_reference_report
 
 
 class ReferenceReportTests(unittest.TestCase):

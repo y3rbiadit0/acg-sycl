@@ -5,7 +5,7 @@ from pathlib import Path
 
 from tooling.data_analysis.enums import CommunicationBackend
 from tooling.data_analysis.models import BenchmarkRun
-from tooling.data_analysis.summarizer import summarize_runs
+from tooling.data_analysis.summarization import summarize_runs
 
 
 class SummarizerTests(unittest.TestCase):

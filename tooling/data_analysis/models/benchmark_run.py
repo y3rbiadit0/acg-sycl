@@ -68,10 +68,3 @@ class BenchmarkRun(BaseModel):
         if self.communicator:
             return CommunicationBackend.from_value(self.communicator)
         return CommunicationBackend.UNKNOWN
-
-
-class DatasetRoot(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    label: str
-    path: Path

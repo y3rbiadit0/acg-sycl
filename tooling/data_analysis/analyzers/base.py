@@ -6,8 +6,8 @@ from pathlib import Path
 
 from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
 from tooling.data_analysis.reporting import ResultsReportRenderer
-from tooling.data_analysis.summarizer import summarize_runs
-from tooling.data_analysis.summaries import BenchmarkSummary
+from tooling.data_analysis.models.summaries import BenchmarkSummary
+from tooling.data_analysis.summarization import summarize_runs
 
 
 class BaseResultsAnalyzer(ABC):
