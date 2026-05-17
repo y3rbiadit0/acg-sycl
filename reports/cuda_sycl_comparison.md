@@ -7,6 +7,16 @@ Matrices: `Bump_2911`
 
 | Dataset | Scale | Comm | Ranks | Repeats | Solver s | Solver min-max s | Running s | Allreduce s | Allreduce us/op | Allreduce calls | Halo s | Halo us/msg | Iters | GF/s | Wall s | Allreduce % | Halo % |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CUDA | 1n1g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 55.770 | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 37.370 | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 38.500 | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 36.720 | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 36.060 | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 36.870 | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 34.640 | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 38.300 | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 38.010 | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 3 | N/A | N/A-N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A | 35.160 | N/A | N/A |
 | SYCL | 1n1g | none | 1 | 3 | 64.288 | 64.240-64.297 | 64.288 | N/A | N/A | N/A | N/A | N/A | 31401 | 143.269 | 86.600 | N/A | N/A |
 | SYCL | 1n4g | mpi | 4 | 3 | 22.451 | 22.433-22.822 | 22.334 | 2.078 | 32.364 | 64204 | 0.639 | N/A | 32101 | 589.520 | 47.820 | 9.255 | 2.848 |
 | SYCL | 2n4g | mpi | 8 | 3 | 15.427 | 15.418-15.826 | 15.377 | 2.339 | 36.241 | 64536 | 0.689 | N/A | 32267 | 862.393 | 39.910 | 15.161 | 4.467 |
@@ -16,6 +26,16 @@ Matrices: `Bump_2911`
 
 | Dataset | Scale | Comm | Ranks | Converged | Iters | Residual | Rel residual r0 | Rel residual rhs | Error norm | Solver s | ms/iter | GF/s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CUDA | 1n1g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 1n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 2n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
+| CUDA | 4n4g | unknown | N/A | 0/3 | N/A | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 | SYCL | 1n1g | none | 1 | 3/3 | 31401 | 2.439e+08 | 9.379e-07 | 9.379e-07 | 0.144 | 64.288 | 2.047 | 143.269 |
 | SYCL | 1n4g | mpi | 4 | 3/3 | 32101 | 2.526e+08 | 9.714e-07 | 9.714e-07 | 0.144 | 22.451 | 0.699 | 589.520 |
 | SYCL | 2n4g | mpi | 8 | 3/3 | 32267 | 2.582e+08 | 9.929e-07 | 9.929e-07 | 0.144 | 15.427 | 0.478 | 862.393 |
