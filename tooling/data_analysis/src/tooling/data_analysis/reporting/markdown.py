@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-from tooling.data_analysis.enums import CommunicationBackend
-from tooling.data_analysis.models import BenchmarkRun
-from tooling.data_analysis.models.summaries import BenchmarkSummary
-from tooling.data_analysis.utils import fmt, markdown_table
+from ..enums import CommunicationBackend
+from ..models import BenchmarkRun
+from ..models.summaries import BenchmarkSummary
+from ..utils import fmt, markdown_table
 
 
 class ResultsReportRenderer:

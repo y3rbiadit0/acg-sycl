@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from tooling.data_analysis.models.stats import SampleStats
+from ..stats import SampleStats
 
 
 class RuntimeStats(BaseModel):

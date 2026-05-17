@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from tooling.data_analysis.enums import CommunicationBackend
-from tooling.data_analysis.models import BenchmarkRun
-from tooling.data_analysis.models.stats import SampleStats
-from tooling.data_analysis.models.summaries import (
+from ..enums import CommunicationBackend
+from ..models import BenchmarkRun
+from ..models.stats import SampleStats
+from ..models.summaries import (
     BenchmarkSummary,
     CorrectnessStats,
     OperationStats,
