@@ -3,12 +3,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
-from tooling.data_analysis.analyzers.cuda import CudaResultsAnalyzer
-from tooling.data_analysis.analyzers.sycl import SyclResultsAnalyzer
-from tooling.data_analysis.enums import Backend
-from tooling.data_analysis.models import DatasetRoot
-from tooling.data_analysis.parsing import parse_reference_report
+from .analyzers.base import BaseResultsAnalyzer
+from .analyzers.cuda import CudaResultsAnalyzer
+from .analyzers.sycl import SyclResultsAnalyzer
+from .enums import Backend
+from .models import DatasetRoot
+from .parsing import parse_reference_report
 
 
 DESCRIPTION = "Summarize aCG benchmark stderr logs into deterministic Markdown reports."

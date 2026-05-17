@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from tooling.data_analysis.cli import main
+from .cli import main
 
 
 if __name__ == "__main__":

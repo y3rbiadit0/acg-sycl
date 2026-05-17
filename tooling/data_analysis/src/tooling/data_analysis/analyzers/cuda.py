@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
-from tooling.data_analysis.enums import CommunicationBackend
-from tooling.data_analysis.models.summaries import BenchmarkSummary
-from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
-from tooling.data_analysis.parsers.base import BaseParser
-from tooling.data_analysis.parsers.cuda import CudaLogParser
+from ..enums import CommunicationBackend
+from ..models import BenchmarkRun, DatasetRoot
+from ..models.summaries import BenchmarkSummary
+from ..parsers.base import BaseParser
+from ..parsers.cuda import CudaLogParser
+from .base import BaseResultsAnalyzer
 
 
 class CudaResultsAnalyzer(BaseResultsAnalyzer):

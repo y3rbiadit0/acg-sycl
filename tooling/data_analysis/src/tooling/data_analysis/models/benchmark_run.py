@@ -4,7 +4,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from tooling.data_analysis.enums import CommunicationBackend
+from ..enums import CommunicationBackend
 
 
 class BenchmarkRun(BaseModel):

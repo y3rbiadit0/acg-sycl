@@ -3,9 +3,9 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
-from tooling.data_analysis.parsers.base import BaseParser
-from tooling.data_analysis.utils import parse_wall_clock
+from ..models import BenchmarkRun, DatasetRoot
+from ..utils import parse_wall_clock
+from .base import BaseParser
 
 
 FLOAT = r"([0-9]+(?:\.[0-9]+)?)"

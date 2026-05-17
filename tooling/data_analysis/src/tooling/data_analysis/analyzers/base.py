@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from pathlib import Path
 
-from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
-from tooling.data_analysis.reporting import ResultsReportRenderer
-from tooling.data_analysis.models.summaries import BenchmarkSummary
-from tooling.data_analysis.summarization import summarize_runs
+from ..models import BenchmarkRun, DatasetRoot
+from ..models.summaries import BenchmarkSummary
+from ..reporting import ResultsReportRenderer
+from ..summarization import summarize_runs
 
 
 class BaseResultsAnalyzer(ABC):

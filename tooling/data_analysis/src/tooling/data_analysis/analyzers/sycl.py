@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tooling.data_analysis.analyzers.base import BaseResultsAnalyzer
-from tooling.data_analysis.models import BenchmarkRun, DatasetRoot
-from tooling.data_analysis.parsers.base import BaseParser
-from tooling.data_analysis.parsers.sycl import SyclLogParser
+from ..models import BenchmarkRun, DatasetRoot
+from ..parsers.base import BaseParser
+from ..parsers.sycl import SyclLogParser
+from .base import BaseResultsAnalyzer
 
 
 class SyclResultsAnalyzer(BaseResultsAnalyzer):

@@ -30,8 +30,7 @@ class ResultsReportRenderer:
         lines = [
             "# aCG Results Summary",
             "",
-            "Deterministic summary generated from verbose benchmark stderr logs. "
-            "Values are medians across repeats unless stated otherwise.",
+            "Values are medians across repeats.",
             "",
             f"Input roots: `{roots}`",
             f"Matrices: `{', '.join(matrices)}`",
