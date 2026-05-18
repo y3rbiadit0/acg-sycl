@@ -2,11 +2,9 @@
 
 #include <chrono>
 #include <cmath>
-#include <algorithm>
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -275,89 +273,6 @@ void print_partition_diagnostics(const acg::matrix::DistributedCsrMatrixPartitio
                 << ' ' << all_stats[offset + 4]
                 << ' ' << all_stats[offset + 5]
                 << ' ' << all_stats[offset + 6] << '\n';
-    }
-  }
-#else
-  (void)partition;
-  (void)ctx;
-#endif
-}
-
-void print_halo_spmv_diagnostics(const acg::matrix::DistributedCsrMatrixPartition &partition, const acg::runtime::RunContext &ctx) {
-#ifdef ACG_HAVE_MPI
-  const auto &halo = partition.halo_matrix;
-  long long active_rows = 0;
-  long long empty_rows = 0;
-  long long single_nnz_rows = 0;
-  long long two_to_four_nnz_rows = 0;
-  long long five_to_sixteen_nnz_rows = 0;
-  long long over_sixteen_nnz_rows = 0;
-  long long min_active_row_nnz = halo.rows > 0 && halo.nnz() > 0 ? std::numeric_limits<long long>::max() : 0;
-  long long max_row_nnz = 0;
-  for (std::int64_t row = 0; row < halo.rows; ++row) {
-    const long long row_nnz = static_cast<long long>(halo.row_ptr[static_cast<std::size_t>(row + 1)] - halo.row_ptr[static_cast<std::size_t>(row)]);
-    max_row_nnz = std::max(max_row_nnz, row_nnz);
-    if (row_nnz == 0) {
-      ++empty_rows;
-    }
-    else {
-      ++active_rows;
-      min_active_row_nnz = std::min(min_active_row_nnz, row_nnz);
-      if (row_nnz == 1) {
-        ++single_nnz_rows;
-      }
-      else if (row_nnz <= 4) {
-        ++two_to_four_nnz_rows;
-      }
-      else if (row_nnz <= 16) {
-        ++five_to_sixteen_nnz_rows;
-      }
-      else {
-        ++over_sixteen_nnz_rows;
-      }
-    }
-  }
-  if (active_rows == 0) {
-    min_active_row_nnz = 0;
-  }
-
-  const long long local_stats[] = {
-      static_cast<long long>(halo.rows),
-      static_cast<long long>(halo.nnz()),
-      active_rows,
-      empty_rows,
-      single_nnz_rows,
-      two_to_four_nnz_rows,
-      five_to_sixteen_nnz_rows,
-      over_sixteen_nnz_rows,
-      min_active_row_nnz,
-      max_row_nnz,
-      static_cast<long long>(partition.ghost_global_columns.size()),
-      static_cast<long long>(partition.imports.size()),
-      static_cast<long long>(partition.exports.size()),
-  };
-
-  std::vector<long long> all_stats;
-  if (ctx.rank == 0) {
-    all_stats.resize(static_cast<std::size_t>(ctx.size) * 13);
-  }
-  MPI_Gather(local_stats, 13, MPI_LONG_LONG, ctx.rank == 0 ? all_stats.data() : nullptr, 13, MPI_LONG_LONG, 0, MPI_COMM_WORLD);
-  if (ctx.rank == 0) {
-    std::cout << "solver_diag_halo_spmv: rank launched_rows halo_nnz active_rows empty_rows nnz1_rows nnz2_4_rows nnz5_16_rows nnz_gt16_rows min_active_row_nnz max_row_nnz ghosts import_peers export_peers empty_row_pct active_row_pct avg_nnz_per_active_row\n";
-    for (int rank = 0; rank < ctx.size; ++rank) {
-      const std::size_t offset = static_cast<std::size_t>(rank) * 13;
-      const long long launched_rows = all_stats[offset + 0];
-      const long long halo_nnz = all_stats[offset + 1];
-      const long long rank_active_rows = all_stats[offset + 2];
-      const long long rank_empty_rows = all_stats[offset + 3];
-      const double empty_pct = launched_rows > 0 ? 100.0 * static_cast<double>(rank_empty_rows) / static_cast<double>(launched_rows) : 0.0;
-      const double active_pct = launched_rows > 0 ? 100.0 * static_cast<double>(rank_active_rows) / static_cast<double>(launched_rows) : 0.0;
-      const double avg_active_nnz = rank_active_rows > 0 ? static_cast<double>(halo_nnz) / static_cast<double>(rank_active_rows) : 0.0;
-      std::cout << "solver_diag_halo_spmv: " << rank;
-      for (int i = 0; i < 13; ++i) {
-        std::cout << ' ' << all_stats[offset + static_cast<std::size_t>(i)];
-      }
-      std::cout << ' ' << empty_pct << ' ' << active_pct << ' ' << avg_active_nnz << '\n';
     }
   }
 #else
@@ -939,7 +854,6 @@ SolverResult run_cg_multi_gpu_mpi(
   if (emit_diagnostics) {
     print_device_diagnostics(ctx);
     print_partition_diagnostics(partition, ctx);
-    print_halo_spmv_diagnostics(partition, ctx);
   }
   DeviceScalar rho_scalar(interior_backend);
   DeviceScalar gamma_scalar(interior_backend);
