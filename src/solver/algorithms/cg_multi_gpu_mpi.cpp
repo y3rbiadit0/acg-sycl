@@ -2,9 +2,11 @@
 
 #include <chrono>
 #include <cmath>
+#include <algorithm>
 #include <cstdlib>
 #include <cstdint>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -117,39 +119,14 @@ private:
   double *ptr_;
 };
 
-class DeviceCsrSpmv {
+class DeviceHaloCsrSpmv {
 public:
-  DeviceCsrSpmv(sycl::queue &queue, const acg::matrix::CsrMatrix<double> &matrix)
-      : queue_(&queue), rows_(matrix.rows), cols_(matrix.cols), nnz_(matrix.nnz()),
+  DeviceHaloCsrSpmv(sycl::queue &queue, const acg::matrix::CsrMatrix<double> &matrix)
+      : queue_(&queue), rows_(matrix.rows), cols_(matrix.cols), nnz_(matrix.nnz()), active_rows_(active_halo_rows(matrix)),
         row_ptr_(make_device_buffer_from(queue, matrix.row_ptr)), col_idx_(make_device_buffer_from(queue, matrix.col_idx)),
-        values_(make_device_buffer_from(queue, matrix.values)),
-        bytes_(8LL * (3 * rows_ + 1 + 2 * nnz_)) {}
-
-  void spmv(const backends::DeviceVector &x, backends::DeviceVector &y) {
-    if (x.size != cols_) {
-      throw std::runtime_error("halo spmv input size mismatch");
-    }
-    if (y.size != rows_) {
-      throw std::runtime_error("halo spmv output size mismatch");
-    }
-
-    const std::int64_t rows = rows_;
-    const std::int64_t *row_ptr = row_ptr_.get();
-    const std::int32_t *col_idx = col_idx_.get();
-    const double *values = values_.get();
-    const double *x_data = x.data;
-    double *y_data = y.data;
-    queue_->submit([&](sycl::handler &h) {
-      h.parallel_for(sycl::range<1>(static_cast<std::size_t>(rows)), [=](sycl::id<1> idx) {
-        const std::int64_t row = static_cast<std::int64_t>(idx[0]);
-        double sum = 0.0;
-        for (std::int64_t jj = row_ptr[row]; jj < row_ptr[row + 1]; ++jj) {
-          sum += values[jj] * x_data[col_idx[jj]];
-        }
-        y_data[row] = sum;
-      });
-    }).wait();
-  }
+        values_(make_device_buffer_from(queue, matrix.values)), device_active_rows_(make_device_buffer_from(queue, active_rows_)),
+        bytes_(static_cast<std::int64_t>(active_rows_.size()) * (2LL * sizeof(std::int64_t) + sizeof(double))
+               + nnz_ * (sizeof(double) + sizeof(std::int32_t) + sizeof(double))) {}
 
   void spmv_add(const backends::DeviceVector &x, backends::DeviceVector &y) {
     if (x.size != cols_) {
@@ -158,16 +135,20 @@ public:
     if (y.size != rows_) {
       throw std::runtime_error("halo spmv output size mismatch");
     }
+    if (active_rows_.empty()) {
+      return;
+    }
 
-    const std::int64_t rows = rows_;
+    const std::size_t active_rows = active_rows_.size();
+    const std::int64_t *active_row_indices = device_active_rows_.get();
     const std::int64_t *row_ptr = row_ptr_.get();
     const std::int32_t *col_idx = col_idx_.get();
     const double *values = values_.get();
     const double *x_data = x.data;
     double *y_data = y.data;
     queue_->submit([&](sycl::handler &h) {
-      h.parallel_for(sycl::range<1>(static_cast<std::size_t>(rows)), [=](sycl::id<1> idx) {
-        const std::int64_t row = static_cast<std::int64_t>(idx[0]);
+      h.parallel_for(sycl::range<1>(active_rows), [=](sycl::id<1> idx) {
+        const std::int64_t row = active_row_indices[idx[0]];
         double sum = 0.0;
         for (std::int64_t jj = row_ptr[row]; jj < row_ptr[row + 1]; ++jj) {
           sum += values[jj] * x_data[col_idx[jj]];
@@ -178,15 +159,29 @@ public:
   }
 
   [[nodiscard]] std::int64_t estimated_spmv_bytes() const noexcept { return bytes_; }
+  [[nodiscard]] std::int64_t active_row_count() const noexcept { return static_cast<std::int64_t>(active_rows_.size()); }
 
 private:
+  static std::vector<std::int64_t> active_halo_rows(const acg::matrix::CsrMatrix<double> &matrix) {
+    std::vector<std::int64_t> rows;
+    rows.reserve(static_cast<std::size_t>(matrix.rows));
+    for (std::int64_t row = 0; row < matrix.rows; ++row) {
+      if (matrix.row_ptr[static_cast<std::size_t>(row)] != matrix.row_ptr[static_cast<std::size_t>(row + 1)]) {
+        rows.push_back(row);
+      }
+    }
+    return rows;
+  }
+
   sycl::queue *queue_;
   std::int64_t rows_;
   std::int64_t cols_;
   std::int64_t nnz_;
+  std::vector<std::int64_t> active_rows_;
   DeviceBuffer<std::int64_t> row_ptr_;
   DeviceBuffer<std::int32_t> col_idx_;
   DeviceBuffer<double> values_;
+  DeviceBuffer<std::int64_t> device_active_rows_;
   std::int64_t bytes_;
 };
 
@@ -280,6 +275,89 @@ void print_partition_diagnostics(const acg::matrix::DistributedCsrMatrixPartitio
                 << ' ' << all_stats[offset + 4]
                 << ' ' << all_stats[offset + 5]
                 << ' ' << all_stats[offset + 6] << '\n';
+    }
+  }
+#else
+  (void)partition;
+  (void)ctx;
+#endif
+}
+
+void print_halo_spmv_diagnostics(const acg::matrix::DistributedCsrMatrixPartition &partition, const acg::runtime::RunContext &ctx) {
+#ifdef ACG_HAVE_MPI
+  const auto &halo = partition.halo_matrix;
+  long long active_rows = 0;
+  long long empty_rows = 0;
+  long long single_nnz_rows = 0;
+  long long two_to_four_nnz_rows = 0;
+  long long five_to_sixteen_nnz_rows = 0;
+  long long over_sixteen_nnz_rows = 0;
+  long long min_active_row_nnz = halo.rows > 0 && halo.nnz() > 0 ? std::numeric_limits<long long>::max() : 0;
+  long long max_row_nnz = 0;
+  for (std::int64_t row = 0; row < halo.rows; ++row) {
+    const long long row_nnz = static_cast<long long>(halo.row_ptr[static_cast<std::size_t>(row + 1)] - halo.row_ptr[static_cast<std::size_t>(row)]);
+    max_row_nnz = std::max(max_row_nnz, row_nnz);
+    if (row_nnz == 0) {
+      ++empty_rows;
+    }
+    else {
+      ++active_rows;
+      min_active_row_nnz = std::min(min_active_row_nnz, row_nnz);
+      if (row_nnz == 1) {
+        ++single_nnz_rows;
+      }
+      else if (row_nnz <= 4) {
+        ++two_to_four_nnz_rows;
+      }
+      else if (row_nnz <= 16) {
+        ++five_to_sixteen_nnz_rows;
+      }
+      else {
+        ++over_sixteen_nnz_rows;
+      }
+    }
+  }
+  if (active_rows == 0) {
+    min_active_row_nnz = 0;
+  }
+
+  const long long local_stats[] = {
+      static_cast<long long>(halo.rows),
+      static_cast<long long>(halo.nnz()),
+      active_rows,
+      empty_rows,
+      single_nnz_rows,
+      two_to_four_nnz_rows,
+      five_to_sixteen_nnz_rows,
+      over_sixteen_nnz_rows,
+      min_active_row_nnz,
+      max_row_nnz,
+      static_cast<long long>(partition.ghost_global_columns.size()),
+      static_cast<long long>(partition.imports.size()),
+      static_cast<long long>(partition.exports.size()),
+  };
+
+  std::vector<long long> all_stats;
+  if (ctx.rank == 0) {
+    all_stats.resize(static_cast<std::size_t>(ctx.size) * 13);
+  }
+  MPI_Gather(local_stats, 13, MPI_LONG_LONG, ctx.rank == 0 ? all_stats.data() : nullptr, 13, MPI_LONG_LONG, 0, MPI_COMM_WORLD);
+  if (ctx.rank == 0) {
+    std::cout << "solver_diag_halo_spmv: rank launched_rows halo_nnz active_rows empty_rows nnz1_rows nnz2_4_rows nnz5_16_rows nnz_gt16_rows min_active_row_nnz max_row_nnz ghosts import_peers export_peers empty_row_pct active_row_pct avg_nnz_per_active_row\n";
+    for (int rank = 0; rank < ctx.size; ++rank) {
+      const std::size_t offset = static_cast<std::size_t>(rank) * 13;
+      const long long launched_rows = all_stats[offset + 0];
+      const long long halo_nnz = all_stats[offset + 1];
+      const long long rank_active_rows = all_stats[offset + 2];
+      const long long rank_empty_rows = all_stats[offset + 3];
+      const double empty_pct = launched_rows > 0 ? 100.0 * static_cast<double>(rank_empty_rows) / static_cast<double>(launched_rows) : 0.0;
+      const double active_pct = launched_rows > 0 ? 100.0 * static_cast<double>(rank_active_rows) / static_cast<double>(launched_rows) : 0.0;
+      const double avg_active_nnz = rank_active_rows > 0 ? static_cast<double>(halo_nnz) / static_cast<double>(rank_active_rows) : 0.0;
+      std::cout << "solver_diag_halo_spmv: " << rank;
+      for (int i = 0; i < 13; ++i) {
+        std::cout << ' ' << all_stats[offset + static_cast<std::size_t>(i)];
+      }
+      std::cout << ' ' << empty_pct << ' ' << active_pct << ' ' << avg_active_nnz << '\n';
     }
   }
 #else
@@ -815,9 +893,9 @@ SolverResult run_cg_multi_gpu_mpi(
 
   sycl::queue queue = ctx.queue;
   backends::OnemathCudaBackend interior_backend(queue, partition.interior_matrix);
-  std::unique_ptr<DeviceCsrSpmv> halo_spmv;
+  std::unique_ptr<DeviceHaloCsrSpmv> halo_spmv;
   if (partition.halo_matrix.nnz() > 0) {
-    halo_spmv = std::make_unique<DeviceCsrSpmv>(queue, partition.halo_matrix);
+    halo_spmv = std::make_unique<DeviceHaloCsrSpmv>(queue, partition.halo_matrix);
   }
 
   const double interior_spmv_flops = 2.0 * static_cast<double>(partition.interior_matrix.nnz());
@@ -861,6 +939,7 @@ SolverResult run_cg_multi_gpu_mpi(
   if (emit_diagnostics) {
     print_device_diagnostics(ctx);
     print_partition_diagnostics(partition, ctx);
+    print_halo_spmv_diagnostics(partition, ctx);
   }
   DeviceScalar rho_scalar(interior_backend);
   DeviceScalar gamma_scalar(interior_backend);
@@ -947,7 +1026,7 @@ SolverResult run_cg_multi_gpu_mpi(
         halo_spmv_time += halo_time;
         iteration_halo_spmv_time += halo_time;
         result.perf.native.spmv.record(halo_time, halo_spmv->estimated_spmv_bytes());
-        result.total_flops += halo_spmv_flops + 2.0 * static_cast<double>(partition.local_rows());
+        result.total_flops += halo_spmv_flops + static_cast<double>(halo_spmv->active_row_count());
       }
     }
     result.perf.cuda.gemv.record(iteration_interior_spmv_time + iteration_halo_spmv_time, cuda_gemv_bytes);
