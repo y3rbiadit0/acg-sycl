@@ -54,6 +54,9 @@ class SyclLogParser(BaseParser):
                 self.parse_stdout_line(line, values, section, partitions)
 
         self.add_partition_imbalance(values, partitions)
+        # Current logs name only the collective; one rank has no communicator.
+        if values.get("ranks") == 1 and not values.get("command_communicator"):
+            values["communicator"] = "none"
 
     def parse_stdout_line(
         self,
@@ -66,6 +69,34 @@ class SyclLogParser(BaseParser):
             values["ranks"] = int(match.group(1))
         elif match := re.match(r"^mpi-mode: (\S+)$", line):
             values["communicator"] = match.group(1)
+        elif match := re.match(r"^solver-collectives: (\S+)$", line):
+            values.setdefault("communicator", match.group(1))
+        elif match := re.match(r"^optimizations: (\S+)$", line):
+            values["optimizations"] = match.group(1)
+        elif line.startswith("timing: "):
+            fields = dict(re.findall(r"(\w+)=([^\s]+)", line))
+            schema = int(fields.get("schema", "0"))
+            values["timing_schema"] = schema
+            # Schema 3 (current): solver_* is native aCG's "total solver time"
+            # -- after warmup, from a barrier through the initial residual and
+            # the loop; solver_max_s is the slowest rank. Schema 2 used loop_*.
+            renames = {"solver_s": "loop_s", "solver_max_s": "loop_max_s", "solver_min_s": "loop_min_s"}
+            for key, value in fields.items():
+                field = renames.get(key, key)
+                if field in ("setup_s", "warmup_s", "loop_s", "loop_max_s", "loop_min_s", "validation_s"):
+                    values[field] = float(value)
+            if schema >= 3 and "loop_max_s" in values:
+                values["solver_time_s"] = values["loop_max_s"]
+        elif line.startswith("waits: "):
+            fields = dict(re.findall(r"(\w+)=([^\s]+)", line))
+            for key, field in (("pack_s", "pack_s"), ("halo_s", "p2p_s"), ("allreduce_s", "allreduce_s"),
+                               ("readback_s", "host_sync_s")):
+                if key in fields:
+                    values[field] = float(fields[key])
+        elif line.startswith("validation: "):
+            fields = dict(re.findall(r"(\w+)=([^\s]+)", line))
+            if true_rel := fields.get("true_rel_residual"):
+                values["true_rel_residual"] = float(true_rel)
         elif match := re.match(r"^solver: .*$", line):
             fields = dict(re.findall(r"(\w+)=([^\s]+)", line))
             if converged := fields.get("converged"):

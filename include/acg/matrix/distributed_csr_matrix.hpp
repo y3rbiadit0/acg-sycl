@@ -44,10 +44,16 @@ struct DistributedCsrMatrixPartition {
 enum class PartitionMethod {
   RowBlock,
   Metis,
+  // A decomposition read from a file rather than computed here. This is how the
+  // native aCG campaign runs: every communicator is handed one fixed partition,
+  // so what is being compared is the communicator and not the partitioner.
+  File,
 };
 
 struct PartitionOptions {
   PartitionMethod method = PartitionMethod::RowBlock;
+  // Only read when method is File.
+  std::string path;
 };
 
 PartitionOptions partition_options_from_environment();
@@ -67,6 +73,14 @@ DistributedCsrMatrixPartition build_metis_partition(
     const CsrMatrix<double> &matrix,
     int rank,
     int size);
+
+// Reads the Matrix Market row-partition vector that the native aCG repo's
+// mtxpartition writes and its --partition consumes.
+DistributedCsrMatrixPartition build_file_partition(
+    const CsrMatrix<double> &matrix,
+    int rank,
+    int size,
+    const std::string &path);
 
 } // namespace acg::matrix
 

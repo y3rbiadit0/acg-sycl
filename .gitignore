@@ -22,3 +22,6 @@ __pycache__/
 
 temp_files/
 
+
+# Job-script snapshots taken by tooling/jobs/leonardo/sycl/launch.sh
+.job-snapshots/

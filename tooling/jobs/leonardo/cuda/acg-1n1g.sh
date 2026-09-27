@@ -9,8 +9,6 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH --mail-type=ALL
-#SBATCH --mail-user=f.merenda2@studenti.unisa.it
 
 set -euo pipefail
 

@@ -21,14 +21,14 @@ acg::runtime::DeviceKind parse_device_kind(const std::string &value) {
   throw std::runtime_error("invalid value for --device: " + value);
 }
 
-acg::solver::MpiMode parse_mpi_mode(const std::string &value) {
-  if (value == "host") {
-    return acg::solver::MpiMode::Host;
+acg::solver::SolverCollectiveMode parse_solver_collective_mode(const std::string &value) {
+  if (value == "mpi") {
+    return acg::solver::SolverCollectiveMode::Mpi;
   }
-  if (value == "gpu-aware") {
-    return acg::solver::MpiMode::GpuAware;
+  if (value == "oneccl") {
+    return acg::solver::SolverCollectiveMode::OneCcl;
   }
-  throw std::runtime_error("invalid value for --mpi-mode: " + value);
+  throw std::runtime_error("invalid value for --solver-collectives: " + value);
 }
 
 std::string require_value(int argc, char **argv, int &index, const char *option) {
@@ -58,6 +58,11 @@ AppConfig parse_args(int argc, char **argv) {
       continue;
     }
 
+    if (arg == "--partition") {
+      config.solver.partition_path = require_value(argc, argv, i, "--partition");
+      continue;
+    }
+
     if (arg == "--device") {
       config.device = parse_device_kind(require_value(argc, argv, i, "--device"));
       continue;
@@ -68,23 +73,14 @@ AppConfig parse_args(int argc, char **argv) {
       continue;
     }
 
-    if (arg == "--mpi-mode") {
-      config.solver.mpi_mode = parse_mpi_mode(require_value(argc, argv, i, "--mpi-mode"));
-      continue;
-    }
-
-    if (arg == "--diff-atol") {
-      config.solver.diff_absolute_tolerance = std::stod(require_value(argc, argv, i, "--diff-atol"));
+    if (arg == "--solver-collectives") {
+      config.solver.solver_collectives =
+          parse_solver_collective_mode(require_value(argc, argv, i, "--solver-collectives"));
       continue;
     }
 
     if (arg == "--log-every") {
       config.solver.log_every = std::stoi(require_value(argc, argv, i, "--log-every"));
-      continue;
-    }
-
-    if (arg == "--diff-rtol") {
-      config.solver.diff_relative_tolerance = std::stod(require_value(argc, argv, i, "--diff-rtol"));
       continue;
     }
 
@@ -99,8 +95,8 @@ AppConfig parse_args(int argc, char **argv) {
       continue;
     }
 
-    if (arg == "--solution-rtol") {
-      config.solver.solution_relative_tolerance = std::stod(require_value(argc, argv, i, "--solution-rtol"));
+    if (arg == "--warmup") {
+      config.solver.warmup = std::stoi(require_value(argc, argv, i, "--warmup"));
       continue;
     }
 
@@ -133,22 +129,21 @@ AppConfig parse_args(int argc, char **argv) {
 }
 
 void print_usage(std::ostream &out, const char *program_name) {
-  out << "Usage: " << program_name << " --matrix <path> [options]\n"
+  out << "Usage: " << program_name << " --matrix <path> --residual-rtol <value> [options]\n"
       << "\n"
       << "Options:\n"
       << "  --matrix <path>             Matrix Market file to load\n"
+      << "  --partition <path>          Matrix Market row-partition vector to use\n"
       << "  --device <default|cpu|gpu>  SYCL device selector\n"
-      << "  --mpi-mode <host|gpu-aware> MPI halo communication mode\n"
+      << "  --solver-collectives <mpi|oneccl>  How the CG scalar allreduces are done\n"
       << "  --profile                   Enable SYCL queue profiling\n"
-      << "  --diff-atol <value>         Absolute tolerance for solution update norm\n"
-      << "  --diff-rtol <value>         Relative tolerance for solution update norm\n"
-      << "  --log-every <n>             Print progress every n iterations\n"
-      << "  --residual-atol <value>     Absolute tolerance for residual norm\n"
-      << "  --residual-rtol <value>     Relative tolerance for residual norm (required)\n"
-      << "  --solution-rtol <value>     Relative solution-error tolerance in manufactured mode\n"
+      << "  --residual-atol <value>     Absolute tolerance for the residual norm\n"
+      << "  --residual-rtol <value>     Relative tolerance for the residual norm (required)\n"
       << "  --max-iters <n>             Maximum solver iterations\n"
-      << "  --manufactured-solution     Build rhs from a known solution\n"
-      << "  --seed <n>                  Seed for manufactured solution\n"
+      << "  --warmup <n>                Untimed warmup iterations (default 10, as native aCG)\n"
+      << "  --log-every <n>             Print the residual every n iterations\n"
+      << "  --manufactured-solution     Build b = A x_exact from a known solution\n"
+      << "  --seed <n>                  Seed for the manufactured solution\n"
       << "  --help, -h                  Show this message\n";
 }
 

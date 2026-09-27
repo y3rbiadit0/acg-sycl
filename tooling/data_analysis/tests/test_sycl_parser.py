@@ -116,6 +116,57 @@ class SyclLogParserTests(unittest.TestCase):
         self.assertEqual(run.imports_imbalance, 3.0)
         self.assertEqual(run.exports_imbalance, 2.0)
 
+    def test_parse_current_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log_dir = root / "2n4g" / "acg-sycl-oneccl-nccl" / "suitesparse" / "Bump_2911"
+            log_dir.mkdir(parents=True)
+            stderr = log_dir / "run-1-stderr.txt"
+            stdout = log_dir / "run-1-stdout.txt"
+            stderr.write_text("", encoding="utf-8")
+            stdout.write_text(
+                "\n".join(
+                    [
+                        "ranks: 8",
+                        "solver-collectives: oneccl",
+                        "solver: converged=true iterations=10 residual=1e-6 solve_time=2.6s",
+                        "timing: schema=3 setup_s=0.400000 warmup_s=0.050000 solver_s=2.500000 "
+                        "solver_max_s=2.600000 solver_min_s=2.400000 per_iter_us=260000.000000 "
+                        "post_solve_s=0.100000 validation_s=0.300000",
+                        "waits: pack_s=0.100000 halo_s=0.200000 allreduce_s=0.300000 readback_s=0.400000",
+                        "validation: true_residual=1.000000e-03 true_rel_residual=9.500000e-07 "
+                        "recurrence_rel_residual=9.000000e-07",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            run = SyclLogParser().parse(stderr, DatasetRoot(label="SYCL", path=root))
+
+        self.assertEqual(run.comm, CommunicationBackend.NCCL)
+        self.assertEqual(run.timing_schema, 3)
+        self.assertEqual(run.setup_s, 0.4)
+        self.assertEqual(run.warmup_s, 0.05)
+        self.assertEqual(run.loop_s, 2.5)
+        self.assertEqual(run.loop_max_s, 2.6)
+        self.assertEqual(run.solver_time_s, 2.6)
+        self.assertEqual(run.pack_s, 0.1)
+        self.assertEqual(run.p2p_s, 0.2)
+        self.assertEqual(run.allreduce_s, 0.3)
+        self.assertEqual(run.host_sync_s, 0.4)
+        self.assertEqual(run.true_rel_residual, 9.5e-7)
+
+    def test_single_rank_is_no_communicator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            log_dir = root / "1n1g" / "acg-sycl-single" / "suitesparse" / "Bump_2911"
+            log_dir.mkdir(parents=True)
+            stderr = log_dir / "run-1-stderr.txt"
+            stderr.write_text("", encoding="utf-8")
+            (log_dir / "run-1-stdout.txt").write_text("ranks: 1\nsolver-collectives: mpi\n", encoding="utf-8")
+            run = SyclLogParser().parse(stderr, DatasetRoot(label="SYCL", path=root))
+        self.assertEqual(run.comm, CommunicationBackend.NONE)
 
 if __name__ == "__main__":
     unittest.main()

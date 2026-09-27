@@ -24,6 +24,9 @@ class CommunicationBackend(str, Enum):
             return cls.NONE
         if normalized in {"gpu-aware", "gpu_aware", "gpuaware", "mpi"}:
             return cls.MPI
+        # SYCL's oneCCL runs use its NCCL backend, the counterpart of --comm nccl.
+        if normalized == "oneccl":
+            return cls.NCCL
         for backend in cls:
             if backend.value == normalized:
                 return backend

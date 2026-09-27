@@ -8,19 +8,34 @@ namespace acg::runtime {
 
 namespace {
 
+// Every queue is in-order. oneCCL's NCCL backend pulls a CUDA stream out of the
+// SYCL queue and rejects an out-of-order one outright:
+//
+//   nccl_comm.cpp:369 get_cuda_stream: condition
+//   sycl_queue.has_property<sycl::property::queue::in_order>() failed
+//
+// so --solver-collectives oneccl cannot run without it. It is unconditional
+// rather than tied to that flag because an mpi run and a oneccl run have to
+// differ in the collective and nothing else; making the queue semantics differ
+// too would leave the comparison measuring both at once.
+//
+// The cost is close to nil. Every solver submission is waited on where it is
+// issued, apart from the per-neighbour pack kernels in submit_pack_kernels(),
+// which an in-order queue serializes rather than overlaps.
+sycl::property_list queue_properties(bool enable_profiling) {
+  if (enable_profiling) {
+    return {sycl::property::queue::in_order{}, sycl::property::queue::enable_profiling{}};
+  }
+  return {sycl::property::queue::in_order{}};
+}
+
 template <typename Selector>
 sycl::queue make_queue_with_selector(Selector selector, bool enable_profiling) {
-  if (enable_profiling) {
-    return sycl::queue{selector, sycl::property_list{sycl::property::queue::enable_profiling{}}};
-  }
-  return sycl::queue{selector};
+  return sycl::queue{selector, queue_properties(enable_profiling)};
 }
 
 sycl::queue make_queue_for_device(const sycl::device &device, bool enable_profiling) {
-  if (enable_profiling) {
-    return sycl::queue{device, sycl::property_list{sycl::property::queue::enable_profiling{}}};
-  }
-  return sycl::queue{device};
+  return sycl::queue{device, queue_properties(enable_profiling)};
 }
 
 } // namespace

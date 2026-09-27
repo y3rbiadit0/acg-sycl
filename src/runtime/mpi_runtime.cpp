@@ -1,8 +1,6 @@
 #include "acg/runtime/mpi_runtime.hpp"
 
-#ifdef ACG_HAVE_MPI
 #include <mpi.h>
-#endif
 
 #include <exception>
 #include <stdexcept>
@@ -10,7 +8,6 @@
 namespace acg::runtime {
 
 ScopedMpiSession::ScopedMpiSession(int &argc, char **&argv) {
-#ifdef ACG_HAVE_MPI
   int initialized = 0;
   MPI_Initialized(&initialized);
   if (initialized == 0) {
@@ -36,14 +33,9 @@ ScopedMpiSession::ScopedMpiSession(int &argc, char **&argv) {
     throw std::runtime_error("MPI_Comm_rank for shared-memory communicator failed");
   }
   MPI_Comm_free(&local_comm);
-#else
-  (void)argc;
-  (void)argv;
-#endif
 }
 
 ScopedMpiSession::~ScopedMpiSession() {
-#ifdef ACG_HAVE_MPI
   if (std::uncaught_exceptions() > 0) {
     return;
   }
@@ -52,7 +44,6 @@ ScopedMpiSession::~ScopedMpiSession() {
   if (owns_mpi_ && finalized == 0) {
     MPI_Finalize();
   }
-#endif
 }
 
 MpiRuntimeInfo ScopedMpiSession::info() const noexcept { return info_; }

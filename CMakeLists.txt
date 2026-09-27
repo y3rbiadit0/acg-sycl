@@ -9,14 +9,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(ACG_ENABLE_SYCL "Build with SYCL support" ON)
-option(ACG_ENABLE_MPI "Build with MPI support" ON)
-option(ACG_ENABLE_GPU_AWARE_MPI "Enable direct device-buffer MPI communication" OFF)
+option(ACG_ENABLE_ONECCL "Enable oneCCL solver device collectives" OFF)
 option(ACG_ENABLE_DEVICE_DEBUG "Build SYCL kernels with debug-friendly flags" OFF)
 option(ACG_ENABLE_METIS "Enable METIS partitioning" OFF)
 set(ACG_SYCL_TARGET "" CACHE STRING "SYCL device target")
 set(ACG_EXTRA_COMPILE_FLAGS "" CACHE STRING "Extra compiler flags for the project")
 set(ACG_EXTRA_LINK_FLAGS "" CACHE STRING "Extra linker flags for the project")
 set(oneMath_ROOT "/opt/oneMath/install" CACHE PATH "oneMath install root")
+set(oneCCL_ROOT "" CACHE PATH "oneCCL installation prefix")
 set(METIS_HOME "" CACHE PATH "METIS installation prefix")
 set(METIS_LIBRARIES "" CACHE STRING "METIS libraries")
 
@@ -35,23 +35,34 @@ add_library(acg_core STATIC
   src/reporting/solver_report.cpp
   src/runtime/queue_factory.cpp
   src/runtime/mpi_runtime.cpp
-  src/solver/algorithms/cg_multi_gpu_mpi.cpp
-  src/solver/algorithms/cg_single_gpu.cpp
-  src/solver/backends/onemath_cuda_backend.cpp
+  src/solver/cg.cpp
   src/solver/cg_solver.cpp
+  src/solver/collectives.cpp
+  src/solver/device_csr.cpp
+  src/solver/halo.cpp
   src/solver/rhs_builder.cpp
-  src/solver/stopping_criteria.cpp
 )
 
 target_include_directories(acg_core PUBLIC include)
 
-if(ACG_ENABLE_MPI)
-  find_package(MPI REQUIRED COMPONENTS CXX)
-  target_link_libraries(acg_core PUBLIC MPI::MPI_CXX)
-  target_compile_definitions(acg_core PUBLIC ACG_HAVE_MPI=1)
-  if(ACG_ENABLE_GPU_AWARE_MPI)
-    target_compile_definitions(acg_core PUBLIC ACG_HAVE_GPU_AWARE_MPI=1)
+# The halo exchange and the MPI allreduces pass device pointers, so the MPI
+# must be CUDA-aware (HPC-X or the CUDA build of Open MPI on Leonardo).
+find_package(MPI REQUIRED COMPONENTS CXX)
+target_link_libraries(acg_core PUBLIC MPI::MPI_CXX)
+
+if(ACG_ENABLE_ONECCL)
+  find_path(ONECCL_INCLUDE_DIR oneapi/ccl.hpp
+    HINTS ${oneCCL_ROOT} $ENV{ONECCL_ROOT} $ENV{CCL_ROOT}
+    PATH_SUFFIXES include)
+  find_library(ONECCL_LIBRARY ccl
+    HINTS ${oneCCL_ROOT} $ENV{ONECCL_ROOT} $ENV{CCL_ROOT}
+    PATH_SUFFIXES lib lib64)
+  if(NOT ONECCL_INCLUDE_DIR OR NOT ONECCL_LIBRARY)
+    message(FATAL_ERROR "ACG_ENABLE_ONECCL=ON but oneCCL was not found. Set oneCCL_ROOT or CCL_ROOT")
   endif()
+  target_include_directories(acg_core PUBLIC ${ONECCL_INCLUDE_DIR})
+  target_link_libraries(acg_core PUBLIC ${ONECCL_LIBRARY})
+  target_compile_definitions(acg_core PUBLIC ACG_HAVE_ONECCL=1)
 endif()
 
 if(ACG_ENABLE_METIS)

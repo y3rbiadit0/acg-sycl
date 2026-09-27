@@ -59,6 +59,15 @@ class BenchmarkRun(BaseModel):
     ghosts_imbalance: float | None = None
     imports_imbalance: float | None = None
     exports_imbalance: float | None = None
+    optimizations: str | None = None
+    timing_schema: int | None = None
+    setup_s: float | None = None
+    warmup_s: float | None = None
+    loop_s: float | None = None
+    loop_max_s: float | None = None
+    loop_min_s: float | None = None
+    validation_s: float | None = None
+    true_rel_residual: float | None = None
 
     @computed_field
     @property
