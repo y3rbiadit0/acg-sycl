@@ -1,4 +1,4 @@
-# aCG-SYCL
+# aCG - SYCL(Conjugate Gradient Solver)
 
 aCG-SYCL is a SYCL implementation of the multi-GPU conjugate gradient solver
 from [aCG](https://github.com/ParCoreLab/aCG) (Trotter et al., SC '25). It solves
@@ -15,21 +15,6 @@ measures the implementation and nothing else.
 The solver targets NVIDIA GPUs through DPC++ and oneMath (cuSPARSE/cuBLAS
 underneath) and is validated on the Leonardo supercomputer (A100, 4 per node).
 
-## 📊 Results at a glance
-
-Paired against native aCG in the same allocations (SuiteSparse Bump_2911 and
-Queen_4147, 3 allocations per cell). Ratio = SYCL time / native time, so below
-1 means SYCL is faster.
-
-| Scale | Collectives | SYCL / native | Note |
-| --- | --- | --- | --- |
-| 1 node, 1–4 GPUs | MPI and NCCL | 0.87–1.02 | parity: within ±3% per iteration |
-| 2–8 nodes | oneCCL vs NCCL | 0.74–1.03 | parity or better in every cell |
-| 2–8 nodes | CUDA-aware MPI | – | SYCL scales to 220 µs/iteration (Bump, 32 GPUs); native MPI hits a slow mode on the same stack, so no ratio is quoted |
-
-How the solver works, how it got here (a 1.3–1.5× speedup over the first SYCL
-version), and the full comparison are in [`sycl.md`](sycl.md).
-
 ## ⚙️ How it works
 
 One iteration of CG, entirely queued on the GPU; the host blocks only where it
@@ -44,18 +29,6 @@ must:
 | Validation | `‖b − Ax‖ / ‖b‖` recomputed on the host from the original matrix after every solve |
 
 One GPU runs the same code with a one-part partition.
-
-## 🗂️ Repository layout
-
-| Path | Contents |
-| --- | --- |
-| [`src/solver`](src/solver) | the solver: `cg.cpp` (loop), `device_csr.cpp` (oneMath), `halo.cpp` (exchange), `collectives.cpp` (MPI/oneCCL) |
-| [`src/matrix`](src/matrix) | Matrix Market reader, row partitioning (file, METIS, row-block) |
-| [`apps/acg_cli`](apps/acg_cli) | the `acg` executable |
-| [`tools/onemath_smoke`](tools/onemath_smoke) | oneMath GEMM/SpMV smoke tests |
-| [`tooling/environments`](tooling/environments) | per-machine environments (`leonardo.sh`, `local.sh`) |
-| [`tooling/jobs/leonardo/sycl`](tooling/jobs/leonardo/sycl/README.md) | the Leonardo harness: submission, SYCL/native campaign, comparison |
-| [`tooling/data_analysis`](tooling/data_analysis) | log parsers and report generation |
 
 ## 🧰 Prerequisites
 
@@ -122,7 +95,7 @@ partitions, the same files the native campaign uses:
 tooling/jobs/leonardo/sycl/stage-partitions.sh   # Bump_2911 and Queen_4147, 2-32 parts
 ```
 
-**3️⃣ Run the comparison.** Every job runs SYCL and native interleaved, round by
+**3️⃣ Run the campaign.** Every job runs SYCL and native interleaved, round by
 round, on the same nodes:
 
 ```bash
@@ -132,7 +105,6 @@ make campaign-plan REPEATS=3                     # what would be submitted, and 
 make now-1n4g NTRIALS=1 QOS=boost_qos_dbg        # quick paired check, foreground
 make campaign REPEATS=3                          # Bump_2911: every topology, 3 allocations
 make campaign REPEATS=3 MATRIX_NAME=Queen_4147
-make compare                                     # SYCL / native, per job and per cell
 ```
 
 | Variable | Default | Set it when |
